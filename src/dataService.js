@@ -42,7 +42,6 @@ const getUusimaaData = async () => {
   }
   const yearString = years.join('');
   const url = `https://sotkanet.fi/rest/1.1/json?indicator=${127}${yearString}&genders=total`;
-  console.log(url);
   const res = await fetch(url);
   const data = await res.json();
   Object.values(data)
@@ -50,7 +49,6 @@ const getUusimaaData = async () => {
     .forEach(entry => {
       uusimaaData.population[entry.year] = entry.value;
     });
-  console.log(uusimaaData.population);
   return uusimaaData;
 };
 
@@ -66,7 +64,6 @@ const getYearIndices = async () => {
     if (!name) yearIndices['all'] = y;
     yearIndices[name] = y;
   });
-  console.log(Object.keys(yearIndices));
   return yearIndices;
 };
 
@@ -224,7 +221,6 @@ export const getInfectionIncidenceForOne = async (
   startYear,
   endYear
 ) => {
-  console.log(disease, region, startYear, endYear);
   if (Array.isArray(region) ? region[0] === 'Uusimaa' : region === 'Uusimaa') {
     const uusimaaValues = await getUusimaaInfectionIncidence(
       disease,
@@ -258,7 +254,7 @@ const getUusimaaInfectionIncidence = async (disease, startYear, endYear) => {
   const d = [];
   for (let year = startYear; year <= endYear; year++) {
     const value = await getUusimaaIncidenceForOneYear(disease, year);
-    d.push([year, value]);
+    if (value !== null) d.push([year, value]);
   }
   return d;
 };
@@ -299,22 +295,13 @@ const getUusimaaIncidenceForOneYear = async (disease, year) => {
   const res1 = await fetch(url);
   const caseData = await res1.json();
   if (!caseData.dataset.dimension.yearmonth) {
-    console.error('No data found with these params');
-    return [];
+    return null;
   }
   const cases = Object.values(caseData.dataset.value).reduce(
     (accum, curr) => accum + parseInt(curr),
     0
   );
-  // // population
-  // const url2 = `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=nidrreportgroup-${diseaseFilter}&row=wscmunicipality2022-878189.878228.877978.877844.877893.&column=yearmonth-${yearFilter}.&filter=measure-433796&fo=1#`;
-  // const res2 = await fetch(url2);
-  // const popData = await res2.json();
-  // const population = Object.values(popData.dataset.value).reduce(
-  //   (accum, curr) => accum + parseInt(curr),
-  //   0
-  // );
   // calculate ratio
   const ratio = (cases * 100000) / uusimaaData.population[year];
-  return parseFloat(ratio.toFixed(2));
+  return parseFloat(ratio.toFixed(1));
 };

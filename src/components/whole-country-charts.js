@@ -12,7 +12,6 @@ export class WholeCountryCharts extends LitElement {
   static get properties() {
     return {
       currentYear: { type: Number },
-      selectedDiseases: { type: Array },
       currentDisease: { type: String },
     };
   }
@@ -20,24 +19,13 @@ export class WholeCountryCharts extends LitElement {
   constructor() {
     super();
     this.currentYear = maxYear;
-    this.selectedDiseases = [];
     this.finlandTopology = null;
     this.infectionData = null;
     this.currentDisease = null;
   }
 
-  willUpdate(changedProps) {
-    console.log('whole country charts willupdate', changedProps);
-    if (changedProps.has('selectedDiseases')) {
-      this.currentDisease =
-        this.selectedDiseases.length > 0 ? this.selectedDiseases[0] : null;
-      console.log('Current diseases set to', this.currentDisease);
-    }
-  }
-
   _fetchInfectionDataTask = new Task(this, {
     task: async () => {
-      console.log('wholecountrycharts infection data task');
       if (!this.finlandTopology) this.finlandTopology = getFinlandTopology();
       const data = {
         year: this.currentYear,

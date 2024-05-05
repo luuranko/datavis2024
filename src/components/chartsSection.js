@@ -1,6 +1,8 @@
 import { LitElement, css, html } from 'lit';
 import '@shoelace-style/shoelace/dist/components/select/select.js';
 import '@shoelace-style/shoelace/dist/components/option/option.js';
+import '@shoelace-style/shoelace/dist/components/radio-group/radio-group.js';
+import '@shoelace-style/shoelace/dist/components/radio/radio.js';
 import { getDiseaseList } from '../dataService';
 import './infectionTimeSeries';
 import { minYear, maxYear } from '../globals';
@@ -10,6 +12,7 @@ export class ChartsSection extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
     selectedDiseases: { type: Array },
+    currentDisease: { type: String },
     startYear: { type: Number },
     endYear: { type: Number },
   };
@@ -18,6 +21,7 @@ export class ChartsSection extends LitElement {
     super();
     this.selectedRegions = ['North Karelia'];
     this.selectedDiseases = ['Norovirus'];
+    this.currentDisease = null;
     this.startYear = minYear;
     this.endYear = maxYear;
     this.infectionData = {};
@@ -60,19 +64,20 @@ export class ChartsSection extends LitElement {
       <div id="page">
         ${this.getYearSelection()}
         <div class="charts">
-          <div id="diseases-selection">${this.getDiseaseFilters()}</div>
           <div id="diseases-chart" class="chart-container">
             <infection-time-series
               .selectedDiseases=${this.selectedDiseases}
+              .currentDisease=${this.currentDisease}
               .selectedRegions=${this.selectedRegions}
               .startYear=${this.startYear}
               .endYear=${this.endYear}></infection-time-series>
           </div>
-          <div>Healthcare filters go here</div>
+          <div id="diseases-selection">${this.getDiseaseFilters()}</div>
           <div class="healthcare-section">
             <div id="healthcare-patients-chart" class="chart-container"></div>
             <div id="healthcare-days-chart" class="chart-container"></div>
           </div>
+          <div>Healthcare filters go here</div>
         </div>
       </div>
     `;
@@ -126,18 +131,56 @@ export class ChartsSection extends LitElement {
         @sl-change=${e => this.switchSelectedDiseases(e)}>
         ${options}
       </sl-select>
+      ${this.getSelectCurrentDiseaseFilter()}
     </div> `;
+  }
+
+  getSelectCurrentDiseaseFilter() {
+    if (this.selectedDiseases.length < 2 || !this.currentDisease) return '';
+    const selectedOptions = this.selectedDiseases.map(d => {
+      return html`<sl-radio value=${d}>${d.replaceAll('_', ' ')}</sl-radio>`;
+    });
+    return html`
+      <sl-radio-group
+        label="Compare regions by"
+        name="Select current disease"
+        value=${this.currentDisease}
+        @sl-change=${e => this.switchCurrentDisease(e)}>
+        ${selectedOptions}
+      </sl-radio-group>
+    `;
+  }
+
+  switchCurrentDisease(e) {
+    this.currentDisease = e.target.value;
+    const options = {
+      bubbles: true,
+      composed: true,
+      detail: { currentDisease: this.currentDisease.replaceAll('_', ' ') },
+    };
+    this.dispatchEvent(new CustomEvent('change-current-disease', options));
   }
 
   switchSelectedDiseases(e) {
     this.selectedDiseases = Array.isArray(e.target.value)
       ? e.target.value
       : [e.target.value];
+    if (this.selectedDiseases.length > 0) {
+      if (
+        !this.currentDisease ||
+        !this.selectedDiseases.includes(this.currentDisease)
+      ) {
+        this.currentDisease = this.selectedDiseases[0];
+      }
+    } else {
+      this.currentDisease = null;
+    }
     const options = {
       bubbles: true,
       composed: true,
       detail: {
         diseases: this.selectedDiseases,
+        currentDisease: this.currentDisease?.replaceAll('_', ' '),
       },
     };
     this.dispatchEvent(new CustomEvent('change-selected-diseases', options));
@@ -149,12 +192,9 @@ export class ChartsSection extends LitElement {
         height: 100%;
         width: 100%;
       }
-      sl-select {
-        /* width: 8rem; */
-      }
       .charts {
         display: grid;
-        grid: 1fr 1fr / 1fr 3fr;
+        grid: 1fr 1fr / 3fr 1fr;
       }
       .healthcare-section {
         display: grid;
@@ -165,11 +205,14 @@ export class ChartsSection extends LitElement {
         grid-template-columns: 1fr 1fr;
         margin: 0 auto 0.5rem;
         min-width: min-content;
-        max-width: 100%;
+        max-width: 30rem;
       }
       #diseases-selection {
         background-color: lightblue;
         padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
       }
       #diseases-chart {
         background-color: pink;

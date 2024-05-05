@@ -12,6 +12,7 @@ export class InfectionTimeSeries extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
     selectedDiseases: { type: Array },
+    currentDisease: { type: String },
     startYear: { type: Number },
     endYear: { type: Number },
   };
@@ -20,6 +21,7 @@ export class InfectionTimeSeries extends LitElement {
     super();
     this.selectedRegions = [];
     this.selectedDiseases = [];
+    this.currentDisease = null;
     this.startYear = 1996;
     this.endYear = 2022;
     this.infectionData = {};
@@ -27,68 +29,138 @@ export class InfectionTimeSeries extends LitElement {
     this.diseases = {};
   }
 
-  // willUpdate(changedProps) {
-  //   if (changedProps.has('selectedDiseases') && this.selectedDiseases) {
-  //     if (changedProps.get('selectedDiseases')) {
-  //       if (
-  //         changedProps.get('selectedDiseases').length >
-  //         this.selectedDiseases.length
-  //       ) {
-  //         const removable = changedProps
-  //           .get('selectedDiseases')
-  //           .filter(d => !this.selectedDiseases.includes(d))
-  //           .map(d => d.replaceAll('_', ' '));
-  //         console.log(removable);
-  //         console.log(this.chart.series.length);
-  //         removable.forEach(s => {
-  //           console.log(s);
-  //           console.log(this.chart.get(s));
-  //           this.chart.get(s).remove();
-  //         });
-  //         console.log(this.chart.series.length);
-  //         this.chart.redraw();
-  //       } else {
-  //         this._fetchInfectionDataTask.run();
-  //       }
-  //     } else {
-  //       this._fetchInfectionDataTask.run();
-  //     }
-  //   }
-  // }
+  /*
+    - consider: if adding selections, only fetch needed series?
+    - consider: if widening timespan selection, only fetch needed years and append?
+  */
+  willUpdate(changedProps) {
+    let shouldFetchData = false;
+    let alreadyMadeChanges = false;
+    let shouldFetchAll = true;
+    let diseasesToFetch = this.selectedDiseases;
+    let regionsToFetch = this.selectedRegions;
+    if (changedProps.has('selectedDiseases')) {
+      const prevDiseases = changedProps.get('selectedDiseases');
+      if (
+        prevDiseases &&
+        this.selectedDiseases.length !== prevDiseases.length &&
+        this.selectedRegions.length > 1
+      ) {
+        shouldFetchData = false;
+      } else if (
+        this.selectedRegions.length === 1 &&
+        prevDiseases.length > this.selectedDiseases.length
+      ) {
+        shouldFetchData = false;
+        const removableDiseases = prevDiseases.filter(
+          d => !this.selectedDiseases.includes(d)
+        );
+        this.updateChartPartially([], removableDiseases);
+        alreadyMadeChanges = true;
+      } else if (
+        this.selectedRegions.length === 1 &&
+        prevDiseases.length < this.selectedDiseases.length
+      ) {
+        shouldFetchData = true;
+        shouldFetchAll = false;
+        diseasesToFetch = this.selectedDiseases.filter(
+          d => !prevDiseases.includes(d)
+        );
+      } else {
+        shouldFetchData = true;
+      }
+    }
+    if (changedProps.has('selectedRegions')) {
+      const prevRegions = changedProps.get('selectedRegions');
+      if (
+        this.currentDisease &&
+        prevRegions.length > this.selectedRegions.length
+      ) {
+        shouldFetchData = false;
+        const removableRegions = prevRegions.filter(
+          r => !this.selectedRegions.includes(r)
+        );
+        this.updateChartPartially([], removableRegions);
+      } else {
+        shouldFetchData = true;
+        if (prevRegions && prevRegions.length < this.selectedRegions.length) {
+          shouldFetchAll = false;
+          regionsToFetch = this.selectedRegions.filter(
+            r => !prevRegions.includes(r)
+          );
+          // Situation where existing series is named by its disease, not region
+          if (prevRegions.length === 1) {
+            this.chart.series[0].name = prevRegions[0];
+            this.chart.series[0].options.id = prevRegions[0];
+            this.chart.series[0].options.name = prevRegions[0];
+            this.chart.series[0].userOptions.id = prevRegions[0];
+            this.chart.series[0].userOptions.name = prevRegions[0];
+          }
+        }
+      }
+    }
+    if (changedProps.has('currentDisease') && !alreadyMadeChanges) {
+      shouldFetchData = true;
+    }
+    if (changedProps.get('startYear') || changedProps.get('endYear')) {
+      const prevStart = changedProps.get('startYear') || this.startYear;
+      const prevEnd = changedProps.get('endYear') || this.endYear;
+      if (prevStart <= this.startYear && prevEnd >= this.endYear) {
+        const removableYears = [];
+        for (let year = prevStart; year <= prevEnd; year++) {
+          if (year < this.startYear || year > this.endYear)
+            removableYears.push(year);
+        }
+        this.updateChartTimespan(removableYears);
+      } else {
+        shouldFetchData = true;
+      }
+    }
+    if (shouldFetchData)
+      this._fetchInfectionDataTask.run([
+        shouldFetchAll,
+        diseasesToFetch,
+        regionsToFetch,
+      ]);
+  }
 
   _fetchInfectionDataTask = new Task(this, {
-    task: async () => {
-      if (this.selectedRegions.length === 1) {
-        this.infectionData = await getInfectionIncidenceManyDiseases(
-          this.selectedDiseases,
+    task: async ([fetchAll, newDiseases, newRegions]) => {
+      let data = [];
+      if (
+        this.selectedRegions.length === 0 ||
+        newDiseases.length === 0 ||
+        !this.currentDisease
+      ) {
+        this.infectionData = [];
+      } else if (this.selectedRegions.length === 1) {
+        data = await getInfectionIncidenceManyDiseases(
+          newDiseases,
           this.selectedRegions,
           this.startYear,
           this.endYear
         );
-      } else {
-        this.infectionData = await getInfectionIncidenceManyRegions(
-          this.selectedDiseases[0],
-          this.selectedRegions,
+      } else if (this.selectedRegions.length > 1) {
+        data = await getInfectionIncidenceManyRegions(
+          this.currentDisease,
+          newRegions,
           this.startYear,
           this.endYear
         );
       }
-      this.updateChart();
+      if (fetchAll) {
+        this.infectionData = data;
+        this.updateChart();
+      } else {
+        this.infectionData = this.infectionData.concat(data);
+        this.updateChartPartially(data, []);
+      }
     },
-    args: () => [
-      this.selectedDiseases,
-      this.selectedRegions,
-      this.startYear,
-      this.endYear,
-    ],
-    // autoRun: false,
+    args: () => [],
+    autoRun: false,
   });
 
   render() {
-    console.log(
-      'Rendering infections chart with series:',
-      this.chart?.series.length
-    );
     return html`
       <div id="container">
         <div id="diseases-chart"></div>
@@ -110,9 +182,42 @@ export class InfectionTimeSeries extends LitElement {
     if (!this.chart) return;
     while (this.chart.series.length) this.chart.series[0].remove();
     this.infectionData.forEach(s => this.chart.addSeries(s));
-    this.chart.title.textStr = this.selectedDiseases
-      .map(d => d.replaceAll('_', ' '))
-      .join('; ');
+    const diseaseString = this.currentDisease
+      ? `${
+          this.selectedRegions.length === 1
+            ? this.selectedDiseases.map(d => d.replaceAll('_', ' ')).join('; ')
+            : this.currentDisease.replaceAll('_', ' ')
+        } in `
+      : '';
+    this.chart.title.textStr = `${diseaseString}${this.selectedRegions.join(
+      ', '
+    )}`;
+    this.chart.redraw();
+  }
+
+  updateChartPartially(addSeries = [], removableSeries = []) {
+    if (!this.chart) return;
+    removableSeries.forEach(d => this.chart.get(d).remove());
+    addSeries.forEach(s => this.chart.addSeries(s));
+    this.chart.title.textStr =
+      this.selectedRegions.length === 1
+        ? `${this.selectedDiseases
+            .map(d => d.replaceAll('_', ' '))
+            .join('; ')} in ${this.selectedRegions[0]}`
+        : `${this.currentDisease.replaceAll(
+            '_',
+            ' '
+          )} in ${this.selectedRegions.join(', ')}`;
+    this.chart.redraw();
+  }
+
+  updateChartTimespan(removableYears) {
+    if (!this.chart) return;
+    this.chart.series.forEach(series => {
+      removableYears.forEach(year => {
+        series.data.find(point => point.x === year).remove();
+      });
+    });
     this.chart.redraw();
   }
 
@@ -125,6 +230,7 @@ export class InfectionTimeSeries extends LitElement {
       credits: { enabled: false },
       subtitle: { text: 'Infections per 100 000 inhabitants' },
       yAxis: { title: { text: 'Infections per 100 000 inhabitants' } },
+      xAxis: { tickInterval: 1 },
       legend: { layout: 'vertical', align: 'right', verticalAlign: 'middle' },
       series: this.infectionData,
     });

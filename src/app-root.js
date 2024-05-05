@@ -9,6 +9,7 @@ import { maxYear, minYear } from './globals';
 export class MyElement extends LitElement {
   static properties = {
     selectedDiseases: { type: Array },
+    currentDisease: { type: String },
     selectedRegions: { type: Array },
     startYear: { type: Number },
     endYear: { type: Number },
@@ -61,9 +62,14 @@ export class MyElement extends LitElement {
   }
 
   render() {
-    console.log('Current selected regions:', this.selectedRegions);
-    console.log('Current selected diseases:', this.selectedDiseases);
-    console.log('Current timespan:', this.startYear, ' - ', this.endYear);
+    console.log(
+      'App root current params:',
+      this.selectedRegions,
+      this.selectedDiseases,
+      this.currentDisease,
+      this.startYear,
+      this.endYear
+    );
     return html`<div id="page">
       ${this._setUpTask.render({
         initial: () => html`Loading page`,
@@ -76,12 +82,16 @@ export class MyElement extends LitElement {
             .selectedDiseases=${this.selectedDiseases}
             .startYear=${this.startYear}
             .endYear=${this.endYear}
-            @change-selected-diseases=${e =>
-              (this.selectedDiseases = e.detail.diseases)}>
+            @change-selected-diseases=${e => {
+              this.selectedDiseases = e.detail.diseases;
+              this.currentDisease = e.detail.currentDisease;
+            }}
+            @change-current-disease=${e =>
+              (this.currentDisease = e.detail.currentDisease)}>
           </charts-section>
           <whole-country-charts
             .currentYear=${this.endYear}
-            .selectedDiseases=${this.selectedDiseases}></whole-country-charts>`,
+            .currentDisease=${this.currentDisease}></whole-country-charts>`,
         error: e => html`Error: ${e}`,
       })}
     </div>`;
