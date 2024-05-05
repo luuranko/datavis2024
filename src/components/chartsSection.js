@@ -5,6 +5,7 @@ import '@shoelace-style/shoelace/dist/components/radio-group/radio-group.js';
 import '@shoelace-style/shoelace/dist/components/radio/radio.js';
 import { getDiseaseList } from '../dataService';
 import './infectionTimeSeries';
+import './healthcareTimeSeries';
 import { minYear, maxYear } from '../globals';
 
 import { Task } from '@lit/task';
@@ -73,9 +74,11 @@ export class ChartsSection extends LitElement {
               .endYear=${this.endYear}></infection-time-series>
           </div>
           <div id="diseases-selection">${this.getDiseaseFilters()}</div>
-          <div class="healthcare-section">
-            <div id="healthcare-patients-chart" class="chart-container"></div>
-            <div id="healthcare-days-chart" class="chart-container"></div>
+          <div id="healthcare">
+            <healthcare-time-series
+              .selectedRegions=${this.selectedRegions}
+              .startYear=${this.startYear}
+              .endYear=${this.endYear}></healthcare-time-series>
           </div>
           <div>Healthcare filters go here</div>
         </div>
@@ -92,10 +95,10 @@ export class ChartsSection extends LitElement {
       return years;
     };
     const changeStartYear = year => {
-      if (year <= this.endYear) this.startYear = year;
+      if (year <= this.endYear) this.startYear = parseInt(year);
     };
     const changeEndYear = year => {
-      if (year >= this.startYear) this.endYear = year;
+      if (year >= this.startYear) this.endYear = parseInt(year);
     };
     return html`
       <div id="timespan-selection">
@@ -196,9 +199,7 @@ export class ChartsSection extends LitElement {
         display: grid;
         grid: 1fr 1fr / 3fr 1fr;
       }
-      .healthcare-section {
-        display: grid;
-        grid-template-rows: 1fr 1fr;
+      #healthcare {
       }
       #timespan-selection {
         display: grid;
@@ -216,12 +217,6 @@ export class ChartsSection extends LitElement {
       }
       #diseases-chart {
         background-color: pink;
-      }
-      #healthcare-patients-chart {
-        background-color: lightgreen;
-      }
-      #healthcare-days-chart {
-        background-color: lightyellow;
       }
     `;
   }

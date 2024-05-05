@@ -1,7 +1,5 @@
 import { LitElement, css, html } from 'lit';
 import Highcharts from 'highcharts';
-import '@shoelace-style/shoelace/dist/components/select/select.js';
-import '@shoelace-style/shoelace/dist/components/option/option.js';
 import {
   getInfectionIncidenceManyDiseases,
   getInfectionIncidenceManyRegions,
@@ -25,13 +23,11 @@ export class InfectionTimeSeries extends LitElement {
     this.startYear = 1996;
     this.endYear = 2022;
     this.infectionData = {};
-    this.healthCareData = {};
     this.diseases = {};
   }
 
   /*
-    - consider: if adding selections, only fetch needed series?
-    - consider: if widening timespan selection, only fetch needed years and append?
+    consider: if widening timespan selection, only fetch needed years and append?
   */
   willUpdate(changedProps) {
     let shouldFetchData = false;
@@ -106,12 +102,14 @@ export class InfectionTimeSeries extends LitElement {
       const prevStart = changedProps.get('startYear') || this.startYear;
       const prevEnd = changedProps.get('endYear') || this.endYear;
       if (prevStart <= this.startYear && prevEnd >= this.endYear) {
-        const removableYears = [];
-        for (let year = prevStart; year <= prevEnd; year++) {
-          if (year < this.startYear || year > this.endYear)
-            removableYears.push(year);
+        if (this.chart.series.length > 0) {
+          const removableYears = [];
+          for (let year = prevStart; year <= prevEnd; year++) {
+            if (year < this.startYear || year > this.endYear)
+              removableYears.push(year);
+          }
+          this.updateChartTimespan(removableYears);
         }
-        this.updateChartTimespan(removableYears);
       } else {
         shouldFetchData = true;
       }
@@ -126,6 +124,7 @@ export class InfectionTimeSeries extends LitElement {
 
   _fetchInfectionDataTask = new Task(this, {
     task: async ([fetchAll, newDiseases, newRegions]) => {
+      console.log('Running fetchInfectionDataTask, fetchAll:', fetchAll);
       let data = [];
       if (
         this.selectedRegions.length === 0 ||
@@ -182,51 +181,48 @@ export class InfectionTimeSeries extends LitElement {
     if (!this.chart) return;
     while (this.chart.series.length) this.chart.series[0].remove();
     this.infectionData.forEach(s => this.chart.addSeries(s));
-    const diseaseString = this.currentDisease
-      ? `${
-          this.selectedRegions.length === 1
-            ? this.selectedDiseases.map(d => d.replaceAll('_', ' ')).join('; ')
-            : this.currentDisease.replaceAll('_', ' ')
-        } in `
-      : '';
-    this.chart.title.textStr = `${diseaseString}${this.selectedRegions.join(
-      ', '
-    )}`;
+    this.chart.title.textStr = this.getChartTitle();
     this.chart.redraw();
   }
 
   updateChartPartially(addSeries = [], removableSeries = []) {
     if (!this.chart) return;
-    removableSeries.forEach(d => this.chart.get(d).remove());
+    if (removableSeries.length === this.chart.series.length) {
+      while (this.chart.series.length) this.chart.series[0].remove();
+    } else {
+      removableSeries.forEach(d => this.chart.get(d).remove());
+    }
     addSeries.forEach(s => this.chart.addSeries(s));
-    this.chart.title.textStr =
-      this.selectedRegions.length === 1
-        ? `${this.selectedDiseases
-            .map(d => d.replaceAll('_', ' '))
-            .join('; ')} in ${this.selectedRegions[0]}`
-        : `${this.currentDisease.replaceAll(
-            '_',
-            ' '
-          )} in ${this.selectedRegions.join(', ')}`;
+    this.chart.title.textStr = this.getChartTitle();
     this.chart.redraw();
+  }
+
+  getChartTitle() {
+    const diseaseString = this.currentDisease
+      ? this.selectedRegions.length === 1
+        ? this.selectedDiseases.map(d => d.replaceAll('_', ' ')).join('; ')
+        : this.currentDisease.replaceAll('_', ' ')
+      : '';
+    const regions =
+      this.selectedRegions.length > 0 ? this.selectedRegions.join(', ') : '';
+    if (diseaseString && regions) return `${diseaseString} in ${regions}`;
+    return `${diseaseString}${regions}`;
   }
 
   updateChartTimespan(removableYears) {
     if (!this.chart) return;
     this.chart.series.forEach(series => {
       removableYears.forEach(year => {
-        series.data.find(point => point.x === year).remove();
+        series.data.find(point => point.x === year)?.remove();
       });
     });
     this.chart.redraw();
   }
 
-  getInfectionChart = () => {
+  getInfectionChart() {
     const container = this.shadowRoot.querySelector('#diseases-chart');
     this.chart = Highcharts.chart(container, {
-      title: {
-        text: '',
-      },
+      title: { text: '' },
       credits: { enabled: false },
       subtitle: { text: 'Infections per 100 000 inhabitants' },
       yAxis: { title: { text: 'Infections per 100 000 inhabitants' } },
@@ -234,7 +230,7 @@ export class InfectionTimeSeries extends LitElement {
       legend: { layout: 'vertical', align: 'right', verticalAlign: 'middle' },
       series: this.infectionData,
     });
-  };
+  }
 
   static get styles() {
     return css`
