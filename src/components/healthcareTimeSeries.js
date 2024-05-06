@@ -1,6 +1,10 @@
 import { LitElement, css, html } from 'lit';
 import Highcharts from 'highcharts';
 import { Task } from '@lit/task';
+import {
+  getCareDaysDataForRegion,
+  getPatientDataForRegion,
+} from '../dataService';
 export class HealthcareTimeSeries extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
@@ -20,12 +24,24 @@ export class HealthcareTimeSeries extends LitElement {
   willUpdate(changedProps) {
     console.log('healthcareTimeSeries willUpdate', changedProps);
     let shouldFetchData = false;
-    if (
-      changedProps.has('startYear') ||
-      changedProps.has('endYear') ||
-      changedProps.has('selectedRegions')
-    ) {
+    if (changedProps.has('selectedRegions')) {
       shouldFetchData = true;
+    }
+    if (changedProps.has('startYear') || changedProps.has('endYear')) {
+      const prevStart = changedProps.get('startYear') || this.startYear;
+      const prevEnd = changedProps.get('endYear') || this.endYear;
+      if (prevStart <= this.startYear && prevEnd >= this.endYear) {
+        if (this.patientsChart && this.patientsChart.series.length > 0) {
+          const removableYears = [];
+          for (let year = prevStart; year <= prevEnd; year++) {
+            if (year < this.startYear || year > this.endYear)
+              removableYears.push(year);
+          }
+          this.updateChartsTimespan(removableYears);
+        }
+      } else {
+        shouldFetchData = true;
+      }
     }
     if (shouldFetchData) this._fetchHealthcareDataTask.run();
   }
@@ -36,6 +52,17 @@ export class HealthcareTimeSeries extends LitElement {
       let data = { patients: [], days: [] };
       if (this.selectedRegions.length === 0) {
         this.healthCareData = data;
+      } else {
+        data.patients = await getPatientDataForRegion(
+          this.selectedRegions[0],
+          this.startYear,
+          this.endYear
+        );
+        data.days = await getCareDaysDataForRegion(
+          this.selectedRegions[0],
+          this.startYear,
+          this.endYear
+        );
       }
       this.healthCareData = data;
       this.updateCharts();
@@ -66,7 +93,6 @@ export class HealthcareTimeSeries extends LitElement {
 
   updateCharts() {
     if (!this.patientsChart || !this.caredaysChart) return;
-
     while (this.patientsChart.series.length)
       this.patientsChart.series[0].remove();
     while (this.caredaysChart.series.length)
@@ -77,15 +103,34 @@ export class HealthcareTimeSeries extends LitElement {
     this.caredaysChart.redraw();
   }
 
+  updateChartsTimespan(removableYears) {
+    if (!this.patientsChart || !this.caredaysChart) return;
+    this.patientsChart.series.forEach(series => {
+      removableYears.forEach(year => {
+        series.data.find(point => point.x === year)?.remove();
+      });
+    });
+    this.caredaysChart.series.forEach(series => {
+      removableYears.forEach(year => {
+        series.data.find(point => point.x === year)?.remove();
+      });
+    });
+    this.patientsChart.redraw();
+    this.caredaysChart.redraw();
+  }
+
   getPatientsChart() {
     const container = this.shadowRoot.querySelector('#patients-chart');
     this.patientsChart = Highcharts.chart(container, {
       title: { text: '' },
       credits: { enabled: false },
-      subtitle: { text: 'Patients per 100 000(? or 1000) inhabitants' },
-      yAxis: { title: { text: 'Patients per 100 000(? or 1000) inhabitants' } },
+      yAxis: { title: { text: 'Patients per 1000 inhabitants' } },
       xAxis: { tickInterval: 1 },
-      legend: { layout: 'vertical', align: 'right', verticalAlign: 'middle' },
+      legend: {
+        layout: 'horizontal',
+        align: 'right',
+        verticalAlign: 'top',
+      },
       series: this.healthCareData.patients,
     });
   }
@@ -95,10 +140,13 @@ export class HealthcareTimeSeries extends LitElement {
     this.caredaysChart = Highcharts.chart(container, {
       title: { text: '' },
       credits: { enabled: false },
-      subtitle: { text: 'Avg. length of visit in days' },
-      yAxis: { title: { text: 'Avg. length of visit in days' } },
+      yAxis: { title: { text: 'Avg. length of stay in days' } },
       xAxis: { tickInterval: 1 },
-      legend: { layout: 'vertical', align: 'right', verticalAlign: 'middle' },
+      legend: {
+        layout: 'horizontal',
+        align: 'right',
+        verticalAlign: 'top',
+      },
       series: this.healthCareData.days,
     });
   }

@@ -13,6 +13,7 @@ export class WholeCountryCharts extends LitElement {
     return {
       currentYear: { type: Number },
       currentDisease: { type: String },
+      currentHealthcareMetric: { type: String },
     };
   }
 
@@ -20,8 +21,10 @@ export class WholeCountryCharts extends LitElement {
     super();
     this.currentYear = maxYear;
     this.finlandTopology = null;
-    this.infectionData = null;
     this.currentDisease = null;
+    this.currentHealthcareMetric = null;
+    this.infectionData = null;
+    this.healthCareData = null;
   }
 
   _fetchInfectionDataTask = new Task(this, {
@@ -41,10 +44,26 @@ export class WholeCountryCharts extends LitElement {
         data.series = getEmptyMapData();
       }
       this.infectionData = data;
-      this.updateChart();
-      return data;
+      this.updateInfectionChart();
     },
     args: () => [this.currentYear, this.currentDisease],
+  });
+
+  _fetchHealthcareDataTask = new Task(this, {
+    task: async () => {
+      if (!this.finlandTopology) this.finlandTopology = getFinlandTopology();
+      const data = {
+        year: this.currentYear,
+        metric: this.currentHealthcareMetric,
+      };
+      if (this.currentHealthcareMetric) {
+      } else {
+        data.series = getEmptyMapData();
+      }
+      this.healthCareData = data;
+      this.updateHealthcareChart();
+    },
+    args: () => [this.currentYear, this.currentHealthcareMetric],
   });
 
   render() {
@@ -61,12 +80,19 @@ export class WholeCountryCharts extends LitElement {
           complete: () => '',
           error: e => html`error ${e}`,
         })}
+        ${this._fetchHealthcareDataTask.render({
+          initial: () => html`waiting...`,
+          pending: () => html`Loading`,
+          complete: () => '',
+          error: e => html`error ${e}`,
+        })}
       </div>
     `;
   }
 
   firstUpdated() {
-    this.finlandMapProvinces();
+    this.infectionMap();
+    this.healthcareMap();
   }
 
   getYearSelection() {
@@ -107,12 +133,12 @@ export class WholeCountryCharts extends LitElement {
     this.currentYear = target;
   }
 
-  finlandMapProvinces() {
+  infectionMap() {
     const pureValues = this.infectionData.series.map(entry => entry[1]);
     const dataMin = pureValues.length > 0 ? Math.min(...pureValues) : null;
     const dataMax = pureValues.length > 0 ? Math.max(...pureValues) : null;
     const container = this.shadowRoot.querySelector('#country-infections');
-    this.chart = Highcharts.mapChart(container, {
+    this.infectionChart = Highcharts.mapChart(container, {
       chart: {
         map: this.finlandTopology,
       },
@@ -121,12 +147,6 @@ export class WholeCountryCharts extends LitElement {
         text: ``,
       },
       subtitle: { text: '' },
-      // mapNavigation: {
-      //   enabled: true,
-      //   buttonOptions: {
-      //     verticalAlign: 'bottom',
-      //   },
-      // },
       colorAxis: {
         min: dataMin,
         max: dataMax,
@@ -150,26 +170,85 @@ export class WholeCountryCharts extends LitElement {
     });
   }
 
-  updateChart() {
-    if (!this.chart) return;
+  updateInfectionChart() {
+    if (!this.infectionChart) return;
     const pureValues = this.infectionData.series.map(entry => entry[1]);
     const dataMin = pureValues.length > 0 ? Math.min(...pureValues) : null;
     const dataMax = pureValues.length > 0 ? Math.max(...pureValues) : null;
-    this.chart.colorAxis[0].update({
+    this.infectionChart.colorAxis[0].update({
       min: dataMin,
       max: dataMax,
     });
-    this.chart.series[0].setData(this.infectionData.series);
-    this.chart.title.textStr = this.infectionData.disease
+    this.infectionChart.series[0].setData(this.infectionData.series);
+    this.infectionChart.title.textStr = this.infectionData.disease
       ? `${this.infectionData.disease.replaceAll('_', ' ')} in ${
           this.infectionData.year
         }`
       : ``;
-    this.chart.subtitle.textStr = this.infectionData.disease
+    this.infectionChart.subtitle.textStr = this.infectionData.disease
       ? 'Cases per 100 000 inhabitants'
       : '';
-    this.chart.tooltip.options.enabled = this.infectionData.disease;
-    this.chart.redraw();
+    this.infectionChart.tooltip.options.enabled = this.infectionData.disease;
+    this.infectionChart.redraw();
+  }
+
+  healthcareMap() {
+    const pureValues = this.healthCareData.series.map(entry => entry[1]);
+    const dataMin = pureValues.length > 0 ? Math.min(...pureValues) : null;
+    const dataMax = pureValues.length > 0 ? Math.max(...pureValues) : null;
+    const container = this.shadowRoot.querySelector('#country-healthcare');
+    this.healthcareChart = Highcharts.mapChart(container, {
+      chart: {
+        map: this.finlandTopology,
+      },
+      credits: { enabled: false },
+      title: {
+        text: ``,
+      },
+      subtitle: { text: '' },
+      colorAxis: {
+        min: dataMin,
+        max: dataMax,
+      },
+      tooltip: { enabled: false },
+      series: [
+        {
+          data: this.healthCareData.series,
+          name: '',
+          states: {
+            hover: {
+              borderColor: 'black',
+            },
+          },
+          dataLabels: {
+            enabled: true,
+            format: '{point.name}',
+          },
+        },
+      ],
+    });
+  }
+
+  updateHealthcareChart() {
+    if (!this.healthcareChart) return;
+    const pureValues = this.infectionData.series.map(entry => entry[1]);
+    const dataMin = pureValues.length > 0 ? Math.min(...pureValues) : null;
+    const dataMax = pureValues.length > 0 ? Math.max(...pureValues) : null;
+    this.healthcareChart.colorAxis[0].update({
+      min: dataMin,
+      max: dataMax,
+    });
+    this.healthcareChart.series[0].setData(this.infectionData.series);
+    this.healthcareChart.title.textStr = this.infectionData.disease
+      ? `${this.infectionData.disease.replaceAll('_', ' ')} in ${
+          this.infectionData.year
+        }`
+      : ``;
+    this.healthcareChart.subtitle.textStr = this.infectionData.disease
+      ? 'Cases per 100 000 inhabitants'
+      : '';
+    this.healthcareChart.tooltip.options.enabled = this.infectionData.disease;
+    this.healthcareChart.redraw();
   }
 
   static styles = [
