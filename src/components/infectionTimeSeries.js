@@ -77,6 +77,13 @@ export class InfectionTimeSeries extends LitElement {
           r => !this.selectedRegions.includes(r)
         );
         this.updateChartPartially([], removableRegions);
+      } else if (
+        prevRegions &&
+        prevRegions.length === 1 &&
+        this.selectedDiseases.length > 1 &&
+        this.selectedRegions.length > 1
+      ) {
+        shouldFetchData = true;
       } else {
         shouldFetchData = true;
         if (prevRegions && prevRegions.length < this.selectedRegions.length) {
@@ -96,22 +103,25 @@ export class InfectionTimeSeries extends LitElement {
       }
     }
     if (changedProps.has('currentDisease') && !alreadyMadeChanges) {
-      shouldFetchData = true;
+      console.log('has currentdisease');
+      if (
+        changedProps.has('selectedDiseases') ||
+        this.selectedRegions.length > 1
+      ) {
+        console.log('should fetch data');
+        shouldFetchData = true;
+      }
     }
     if (changedProps.get('startYear') || changedProps.get('endYear')) {
       const prevStart = changedProps.get('startYear') || this.startYear;
       const prevEnd = changedProps.get('endYear') || this.endYear;
       if (prevStart <= this.startYear && prevEnd >= this.endYear) {
         if (this.chart.series.length > 0) {
-          const removableYears = [];
-          for (let year = prevStart; year <= prevEnd; year++) {
-            if (year < this.startYear || year > this.endYear)
-              removableYears.push(year);
-          }
-          this.updateChartTimespan(removableYears);
+          this.updateChartTimespan();
         }
       } else {
-        shouldFetchData = true;
+        shouldFetchData = !this.hasDataForSelectedTimespan();
+        if (!shouldFetchData) this.updateChartTimespan();
       }
     }
     if (shouldFetchData)
@@ -209,14 +219,18 @@ export class InfectionTimeSeries extends LitElement {
     return `${diseaseString}${regions}`;
   }
 
-  updateChartTimespan(removableYears) {
+  updateChartTimespan() {
     if (!this.chart) return;
-    this.chart.series.forEach(series => {
-      removableYears.forEach(year => {
-        series.data.find(point => point.x === year)?.remove();
-      });
-    });
-    this.chart.redraw();
+    this.chart.xAxis[0].setExtremes(this.startYear, this.endYear);
+  }
+
+  hasDataForSelectedTimespan() {
+    if (!this.chart) return false;
+    const firstYearInData = this.infectionData[0][0];
+    const lastYearInData = this.infectionData[this.infectionData.length - 1][0];
+    if (firstYearInData > this.startYear || lastYearInData < this.endYear)
+      return false;
+    return true;
   }
 
   getInfectionChart() {
@@ -225,9 +239,13 @@ export class InfectionTimeSeries extends LitElement {
       title: { text: '' },
       credits: { enabled: false },
       subtitle: { text: 'Infections per 100 000 inhabitants' },
-      yAxis: { title: { text: 'Infections per 100 000 inhabitants' } },
+      yAxis: { title: { text: 'Infections' } },
       xAxis: { tickInterval: 1 },
-      legend: { layout: 'vertical', align: 'right', verticalAlign: 'middle' },
+      legend: {
+        layout: 'horizontal',
+        align: 'right',
+        verticalAlign: 'top',
+      },
       series: this.infectionData,
     });
   }

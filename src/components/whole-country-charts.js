@@ -231,23 +231,23 @@ export class WholeCountryCharts extends LitElement {
 
   updateHealthcareChart() {
     if (!this.healthcareChart) return;
-    const pureValues = this.infectionData.series.map(entry => entry[1]);
+    const pureValues = this.healthCareData.series.map(entry => entry[1]);
     const dataMin = pureValues.length > 0 ? Math.min(...pureValues) : null;
     const dataMax = pureValues.length > 0 ? Math.max(...pureValues) : null;
     this.healthcareChart.colorAxis[0].update({
       min: dataMin,
       max: dataMax,
     });
-    this.healthcareChart.series[0].setData(this.infectionData.series);
-    this.healthcareChart.title.textStr = this.infectionData.disease
-      ? `${this.infectionData.disease.replaceAll('_', ' ')} in ${
-          this.infectionData.year
+    this.healthcareChart.series[0].setData(this.healthCareData.series);
+    this.healthcareChart.title.textStr = this.healthCareData.metric
+      ? `${this.healthCareData.metric.replaceAll('_', ' ')} in ${
+          this.healthCareData.year
         }`
       : ``;
-    this.healthcareChart.subtitle.textStr = this.infectionData.disease
-      ? 'Cases per 100 000 inhabitants'
+    this.healthcareChart.subtitle.textStr = this.healthCareData.metric
+      ? '???'
       : '';
-    this.healthcareChart.tooltip.options.enabled = this.infectionData.disease;
+    this.healthcareChart.tooltip.options.enabled = this.healthCareData.metric;
     this.healthcareChart.redraw();
   }
 

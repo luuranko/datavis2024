@@ -14,6 +14,7 @@ export class ChartsSection extends LitElement {
     selectedRegions: { type: Array },
     selectedDiseases: { type: Array },
     currentDisease: { type: String },
+    healthcareCategory: { type: String },
     startYear: { type: Number },
     endYear: { type: Number },
   };
@@ -73,14 +74,21 @@ export class ChartsSection extends LitElement {
               .startYear=${this.startYear}
               .endYear=${this.endYear}></infection-time-series>
           </div>
-          <div id="diseases-selection">${this.getDiseaseFilters()}</div>
+          <div id="disease-selection-container">
+            ${this.getDiseaseFilters()}
+          </div>
           <div id="healthcare">
             <healthcare-time-series
               .selectedRegions=${this.selectedRegions}
               .startYear=${this.startYear}
-              .endYear=${this.endYear}></healthcare-time-series>
+              .endYear=${this.endYear}
+              @change-healthcare-category=${e =>
+                (this.healthcareCategory =
+                  e.detail.healthcareCategory)}></healthcare-time-series>
           </div>
-          <div>Healthcare filters go here</div>
+          <div id="healthcare-filters-container">
+            ${this.getHealthcareFilters()}
+          </div>
         </div>
       </div>
     `;
@@ -154,6 +162,10 @@ export class ChartsSection extends LitElement {
     `;
   }
 
+  getHealthcareFilters() {
+    return html` <div id="healthcare-filters"></div> `;
+  }
+
   switchCurrentDisease(e) {
     this.currentDisease = e.target.value;
     const options = {
@@ -201,6 +213,10 @@ export class ChartsSection extends LitElement {
       }
       #healthcare {
       }
+      #disease-selection-container {
+        border-bottom: 2px solid grey;
+        background-color: var(--sl-color-neutral-100);
+      }
       #timespan-selection {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -209,7 +225,6 @@ export class ChartsSection extends LitElement {
         max-width: 30rem;
       }
       #diseases-selection {
-        background-color: lightblue;
         padding: 0.5rem;
         display: flex;
         flex-direction: column;
@@ -217,6 +232,7 @@ export class ChartsSection extends LitElement {
       }
       #diseases-chart {
         background-color: pink;
+        border-bottom: 2px solid grey;
       }
     `;
   }

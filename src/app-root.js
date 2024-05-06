@@ -36,31 +36,6 @@ export class MyElement extends LitElement {
     autorun: false,
   });
 
-  static get styles() {
-    return css`
-      :host {
-        height: 100vh;
-        padding: 1rem;
-        width: 100vw;
-      }
-      #map-container {
-        width: 100%;
-        border: 1px dotted grey;
-      }
-      #page {
-        display: grid;
-        grid-template-columns: 2fr 3fr 2fr;
-        gap: 1rem;
-        height: 100%;
-        width: 100%;
-      }
-      #whole-country-data {
-        width: 100%;
-        border: 1px dotted grey;
-      }
-    `;
-  }
-
   render() {
     console.log(
       'App root current params:',
@@ -95,6 +70,31 @@ export class MyElement extends LitElement {
         error: e => html`Error: ${e}`,
       })}
     </div>`;
+  }
+
+  static get styles() {
+    return css`
+      :host {
+        height: 100vh;
+        padding: 1rem;
+        width: 100vw;
+      }
+      #map-container {
+        width: 100%;
+        border: 1px dotted grey;
+      }
+      #page {
+        display: grid;
+        grid-template-columns: 1fr 3fr 1fr;
+        gap: 1rem;
+        height: 100%;
+        width: 100%;
+      }
+      #whole-country-data {
+        width: 100%;
+        border: 1px dotted grey;
+      }
+    `;
   }
 }
 
