@@ -10,6 +10,7 @@ export class MyElement extends LitElement {
   static properties = {
     selectedDiseases: { type: Array },
     currentDisease: { type: String },
+    currentHealthcareMetric: { type: Object },
     selectedRegions: { type: Array },
     startYear: { type: Number },
     endYear: { type: Number },
@@ -42,6 +43,7 @@ export class MyElement extends LitElement {
       this.selectedRegions,
       this.selectedDiseases,
       this.currentDisease,
+      this.currentHealthcareMetric,
       this.startYear,
       this.endYear
     );
@@ -62,11 +64,15 @@ export class MyElement extends LitElement {
               this.currentDisease = e.detail.currentDisease;
             }}
             @change-current-disease=${e =>
-              (this.currentDisease = e.detail.currentDisease)}>
+              (this.currentDisease = e.detail.currentDisease)}
+            @change-healthcare-metric=${e =>
+              (this.currentHealthcareMetric = e.detail.healthcareMetric)}>
           </charts-section>
           <whole-country-charts
             .currentYear=${this.endYear}
-            .currentDisease=${this.currentDisease}></whole-country-charts>`,
+            .currentDisease=${this.currentDisease}
+            .currentHealthcareMetric=${this
+              .currentHealthcareMetric}></whole-country-charts>`,
         error: e => html`Error: ${e}`,
       })}
     </div>`;

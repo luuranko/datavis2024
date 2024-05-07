@@ -1,4 +1,5 @@
 import { minYear, maxYear } from './globals';
+import { healthcareCategories } from './components/categories';
 
 export const wellbeingToStateMap = {
   Uusimaa: 'Uusimaa',
@@ -114,6 +115,7 @@ const getSotkanetCountyIndices = async () => {
   data
     .filter(entry => entry.category === 'MAAKUNTA')
     .forEach(entry => (sotkanetCountyIndices[entry.title.en] = entry.id));
+  console.log(sotkanetCountyIndices);
   return sotkanetCountyIndices;
 };
 
@@ -324,7 +326,7 @@ const getUusimaaIncidenceForOneYear = async (disease, year) => {
   return parseFloat(ratio.toFixed(1));
 };
 
-const getSotkanetData = async (ind, regionIndex, yearFilter) => {
+const getSotkanetDataForOneRegion = async (ind, regionIndex, yearFilter) => {
   const url = `https://sotkanet.fi/rest/1.1/json?indicator=${ind}${yearFilter}&genders=total`;
   const res = await fetch(url);
   const data = await res.json();
@@ -335,83 +337,70 @@ const getSotkanetData = async (ind, regionIndex, yearFilter) => {
   return values;
 };
 
-export const getVisitsDataForRegion = async (region, startYear, endYear) => {
+export const getHealthcareDataForManyRegions = async (
+  ind,
+  regions,
+  startYear,
+  endYear
+) => {
   const series = [];
-  const regionIndex = sotkanetCountyIndices[region];
+  const regionIndices = regions.map(region => sotkanetCountyIndices[region]);
   const years = getSotkanetYearsFilterString(startYear, endYear);
-  const outpatientMedical = await getSotkanetData(4123, regionIndex, years);
-  series.push({
-    name: 'Outpatient medical visits (physicians) in primary health care',
-    data: outpatientMedical,
-  });
-  const outpatientPhysician = await getSotkanetData(1552, regionIndex, years);
-  series.push({
-    name: 'Outpatient physician visits in primary health care',
-    data: outpatientPhysician,
-  });
-  const outpatientSpecialised = await getSotkanetData(5077, regionIndex, years);
-  series.push({
-    name: 'Outpatient specialised health care visits (emergency)',
-    data: outpatientSpecialised,
-  });
-  const visitsSpecialised = await getSotkanetData(1560, regionIndex, years);
-  series.push({
-    name: 'Outpatient visits in specialised health care',
-    data: visitsSpecialised,
-  });
-  const somatic = await getSotkanetData(1561, regionIndex, years);
-  series.push({
-    name: 'Outpatient visits in specialised somatic health care',
-    data: somatic,
+  const url = `https://sotkanet.fi/rest/1.1/json?indicator=${ind}${years}&genders=total`;
+  const res = await fetch(url);
+  const data = await res.json();
+  const values = data
+    .filter(entry => regionIndices.includes(entry.region))
+    .toSorted((a, b) => a.year - b.year);
+  regions.forEach(region => {
+    const data = values
+      .filter(val => val.region === sotkanetCountyIndices[region])
+      .map(val => [val.year, val.value]);
+    series.push({ name: region, id: region, data: data });
   });
   return series;
 };
 
-export const getPatientDataForRegion = async (region, startYear, endYear) => {
+export const getHealthcareDataForRegionByCategory = async (
+  category,
+  region,
+  startYear,
+  endYear
+) => {
   const series = [];
   const regionIndex = sotkanetCountyIndices[region];
   const years = getSotkanetYearsFilterString(startYear, endYear);
-  const inpatientValues = await getSotkanetData(1268, regionIndex, years);
-  series.push({
-    name: 'Inpatient primary health care',
-    data: inpatientValues,
-  });
-  const hospitalValues = await getSotkanetData(1256, regionIndex, years);
-  series.push({
-    name: 'Hospital care',
-    data: hospitalValues,
-  });
-  const somaticValues = await getSotkanetData(1260, regionIndex, years);
-  series.push({
-    name: 'Specialised somatic inpatient health care',
-    data: somaticValues,
-  });
-  const physicianValues = await getSotkanetData(1556, regionIndex, years);
-  series.push({
-    name: 'Patients seen by a physician in primary health care',
-    data: physicianValues,
-  });
+  for (let i = 0; i < healthcareCategories[category].metrics.length; i++) {
+    const metric = healthcareCategories[category].metrics[i];
+    const { id, name } = metric;
+    const data = await getSotkanetDataForOneRegion(id, regionIndex, years);
+    series.push({ name, data });
+  }
   return series;
 };
 
-export const getCareDaysDataForRegion = async (region, startYear, endYear) => {
-  const series = [];
-  const regionIndex = sotkanetCountyIndices[region];
-  const years = getSotkanetYearsFilterString(startYear, endYear);
-  const inpatientValues = await getSotkanetData(1266, regionIndex, years);
-  series.push({
-    name: 'Inpatient primary health care',
-    data: inpatientValues,
-  });
-  const hospitalValues = await getSotkanetData(1254, regionIndex, years);
-  series.push({
-    name: 'Hospital care',
-    data: hospitalValues,
-  });
-  const somaticValues = await getSotkanetData(1258, regionIndex, years);
-  series.push({
-    name: 'Specialised somatic inpatient health care',
-    data: somaticValues,
-  });
-  return series;
+export const getHealthcareDataWholeCountry = async (ind, year) => {
+  const regionIndices = Array.from(
+    new Set(Object.values(wellbeingToStateMap))
+  ).map(
+    region =>
+      sotkanetCountyIndices[
+        Object.entries(wellbeingToStateMap).find(r => r[1] === region)[0]
+      ]
+  );
+  const years = getSotkanetYearsFilterString(year, year);
+  const url = `https://sotkanet.fi/rest/1.1/json?indicator=${ind}${years}&genders=total`;
+  const res = await fetch(url);
+  const data = await res.json();
+  const values = data
+    .filter(entry => regionIndices.includes(entry.region))
+    .map(entry => [
+      getHcKey(
+        Object.entries(sotkanetCountyIndices).find(
+          i => i[1] === entry.region
+        )[0]
+      ),
+      entry.value,
+    ]);
+  return values;
 };

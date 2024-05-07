@@ -3,35 +3,83 @@ import Highcharts from 'highcharts';
 import '@shoelace-style/shoelace/dist/components/tab-panel/tab-panel.js';
 import '@shoelace-style/shoelace/dist/components/tab-group/tab-group.js';
 import '@shoelace-style/shoelace/dist/components/tab/tab.js';
+import '@shoelace-style/shoelace/dist/components/radio-button/radio-button.js';
+import '@shoelace-style/shoelace/dist/components/radio-group/radio-group.js';
 import { Task } from '@lit/task';
 import {
-  getVisitsDataForRegion,
-  getCareDaysDataForRegion,
-  getPatientDataForRegion,
+  getHealthcareDataForManyRegions,
+  getHealthcareDataForRegionByCategory,
 } from '../dataService';
+import { getMetricById, getMetricsByCategoryAndContext } from './categories';
+
 export class HealthcareTimeSeries extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
     startYear: { type: Number },
     endYear: { type: Number },
     currentCategory: { type: String },
+    healthcareContext: { type: String },
+    selectedDaysMetric: { type: Object },
+    selectedPatientsMetric: { type: Object },
+    selectedVisitsMetric: { type: Object },
   };
   constructor() {
     super();
     this.selectedRegions = [];
-    this.startYear = 1996;
-    this.endYear = 2022;
     this.healthCareData = {};
-    this.currentCategory = 'Patients';
+    this.currentCategory = null;
+    this.healthcareContext = null;
     this.visitsChart = null;
     this.patientsChart = null;
     this.caredaysChart = null;
+    this.selectedVisitsMetric = null;
+    this.selectedPatientsMetric = null;
+    this.selectedDaysMetric = null;
   }
 
   willUpdate(changedProps) {
-    console.log('healthcareTimeSeries willUpdate', changedProps);
     let shouldFetchData = false;
+    let shouldFetchAll = true;
+    let fetchOnlyOne = null;
+    let regionsToFetch = this.selectedRegions;
+    if (changedProps.has('healthcareContext')) {
+      this.selectedVisitsMetric = getMetricsByCategoryAndContext(
+        'Visits',
+        this.healthcareContext
+      )
+        .reverse()
+        .pop();
+      this.selectedPatientsMetric = getMetricsByCategoryAndContext(
+        'Patients',
+        this.healthcareContext
+      )
+        .reverse()
+        .pop();
+      this.selectedDaysMetric = getMetricsByCategoryAndContext(
+        'Length of stay',
+        this.healthcareContext
+      )
+        .reverse()
+        .pop();
+    }
+    if (changedProps.has('selectedVisitsMetric') && this.selectedVisitsMetric) {
+      fetchOnlyOne = 'Visits';
+      shouldFetchData = true;
+    } else if (
+      changedProps.has('selectedPatientsMetric') &&
+      this.selectedPatientsMetric
+    ) {
+      fetchOnlyOne = 'Patients';
+      shouldFetchData = true;
+    } else if (
+      changedProps.has('selectedDaysMetric') &&
+      this.selectedDaysMetric
+    ) {
+      fetchOnlyOne = 'Length of stay';
+      shouldFetchData = true;
+    }
     if (changedProps.has('selectedRegions')) {
+      const prevRegions = changedProps.get('selectedRegions');
       shouldFetchData = true;
     }
     if (changedProps.has('startYear') || changedProps.has('endYear')) {
@@ -46,66 +94,209 @@ export class HealthcareTimeSeries extends LitElement {
         if (!shouldFetchData) this.updateChartsTimespan();
       }
     }
-    if (shouldFetchData) this._fetchHealthcareDataTask.run();
+    if (shouldFetchData)
+      this._fetchHealthcareDataTask.run([
+        shouldFetchAll,
+        regionsToFetch,
+        fetchOnlyOne,
+      ]);
   }
 
-  // TODO WHAT TO DO WHEN SELECTING MANY REGIONS
   _fetchHealthcareDataTask = new Task(this, {
-    task: async () => {
-      console.log('Running fetchHealthcareDataTask');
+    task: async ([fetchAll, newRegions, fetchOnlyOne]) => {
       let data = { visits: [], patients: [], days: [] };
       if (this.selectedRegions.length === 0) {
         this.healthCareData = data;
-      } else {
-        data.visits = await getVisitsDataForRegion(
+      } else if (this.selectedRegions.length === 1) {
+        data.visits = await getHealthcareDataForRegionByCategory(
+          'Visits',
           this.selectedRegions[0],
           this.startYear,
           this.endYear
         );
-        data.patients = await getPatientDataForRegion(
+        data.patients = await getHealthcareDataForRegionByCategory(
+          'Patients',
           this.selectedRegions[0],
           this.startYear,
           this.endYear
         );
-        data.days = await getCareDaysDataForRegion(
+        data.days = await getHealthcareDataForRegionByCategory(
+          'Length of stay',
           this.selectedRegions[0],
           this.startYear,
           this.endYear
         );
+      } else if (this.selectedRegions.length > 1) {
+        if (!fetchOnlyOne) {
+          data.visits = await this.getVisitsNewRegionData(newRegions);
+          data.patients = await this.getPatientsNewRegionData(newRegions);
+          data.days = await this.getDaysNewRegionData(newRegions);
+        } else {
+          switch (fetchOnlyOne) {
+            case 'Visits':
+              data.visits = await this.getVisitsNewRegionData(newRegions);
+              data.patients = this.healthCareData.patients;
+              data.days = this.healthCareData.days;
+              break;
+            case 'Patients':
+              data.patients = await this.getPatientsNewRegionData(newRegions);
+              data.days = this.healthCareData.days;
+              data.visits = this.healthCareData.visits;
+              break;
+            case 'Length of stay':
+              data.days = await this.getDaysNewRegionData(newRegions);
+              data.patients = this.healthCareData.patients;
+              data.visits = this.healthCareData.visits;
+              break;
+          }
+        }
       }
-      this.healthCareData = data;
-      this.updateCharts();
+      if (fetchAll) {
+        this.healthCareData = data;
+        this.updateCharts();
+      } else {
+        this.healthCareData = {
+          visits: this.healthCareData.visits.concat(data.visits),
+          patients: this.healthCareData.patients.concat(data.patients),
+          days: this.healthCareData.days.concat(data.days),
+        };
+        this.updateChartsPartially(data);
+      }
     },
     args: () => [],
     autoRun: false,
   });
 
+  async getVisitsNewRegionData(newRegions) {
+    const d = await getHealthcareDataForManyRegions(
+      this.selectedVisitsMetric.id,
+      newRegions,
+      this.startYear,
+      this.endYear
+    );
+    return d;
+  }
+
+  async getPatientsNewRegionData(newRegions) {
+    const d = await getHealthcareDataForManyRegions(
+      this.selectedPatientsMetric.id,
+      newRegions,
+      this.startYear,
+      this.endYear
+    );
+    return d;
+  }
+
+  async getDaysNewRegionData(newRegions) {
+    const d = await getHealthcareDataForManyRegions(
+      this.selectedDaysMetric.id,
+      newRegions,
+      this.startYear,
+      this.endYear
+    );
+    return d;
+  }
+
   render() {
     return html`
       <div id="container">
         ${this._fetchHealthcareDataTask.render({
-          initial: () => html`loading healthcare data`,
-          pending: () => html`loading healthcare data`,
+          initial: () => html`Loading healthcare data`,
+          pending: () => html`Loading healthcare data`,
           complete: () => ``,
           error: e => html`Error ${e}`,
         })}
         <sl-tab-group
           placement="top"
           @sl-tab-show=${e => this.handleSelectedCategory(e)}>
-          <sl-tab slot="nav" panel="Visits">Visits</sl-tab>
-          <sl-tab slot="nav" panel="Patients" active>Patients</sl-tab>
-          <sl-tab slot="nav" panel="Length of stay">Length of stay</sl-tab>
+          <sl-tab
+            slot="nav"
+            panel="Visits"
+            ?active=${this.currentCategory === 'Visits'}
+            >Visits</sl-tab
+          >
+          <sl-tab
+            slot="nav"
+            panel="Patients"
+            ?active=${this.currentCategory === 'Patients'}
+            >Patients</sl-tab
+          >
+          <sl-tab
+            slot="nav"
+            panel="Length of stay"
+            ?active=${this.currentCategory === 'Length of stay'}
+            >Length of stay</sl-tab
+          >
           <sl-tab-panel name="Visits">
+            ${this.getSelectionRadio('Visits')}
             <div id="visits-chart"></div>
           </sl-tab-panel>
           <sl-tab-panel name="Patients">
+            ${this.getSelectionRadio('Patients')}
             <div id="patients-chart"></div>
           </sl-tab-panel>
           <sl-tab-panel name="Length of stay">
+            ${this.getSelectionRadio('Length of stay')}
             <div id="caredays-chart"></div> </sl-tab-panel
         ></sl-tab-group>
       </div>
     `;
+  }
+
+  getSelectionRadio(category) {
+    if (this.selectedRegions.length < 2) return '';
+    return html` <div class="selection-radio">
+      <sl-radio-group
+        name="Select metric"
+        value=${this.getPropOfCategory(category)?.id}
+        size="small"
+        @sl-change=${this.getChangeHandlerOfCategory(category)}>
+        ${getMetricsByCategoryAndContext(category, this.healthcareContext).map(
+          m => {
+            return html`
+              <sl-radio-button value=${m.id}>${m.name}</sl-radio-button>
+            `;
+          }
+        )}
+      </sl-radio-group>
+    </div>`;
+  }
+
+  getPropOfCategory(category) {
+    switch (category) {
+      case 'Visits':
+        return this.selectedVisitsMetric;
+      case 'Patients':
+        return this.selectedPatientsMetric;
+      case 'Length of stay':
+        return this.selectedDaysMetric;
+    }
+  }
+
+  getChangeHandlerOfCategory(category) {
+    switch (category) {
+      case 'Visits':
+        const handleVisitsMetricChange = e => {
+          const newValue = e.target.value;
+          const metric = getMetricById(parseInt(newValue));
+          this.selectedVisitsMetric = metric;
+        };
+        return handleVisitsMetricChange;
+      case 'Patients':
+        const handlePatientsMetricChange = e => {
+          const newValue = e.target.value;
+          const metric = getMetricById(parseInt(newValue));
+          this.selectedPatientsMetric = metric;
+        };
+        return handlePatientsMetricChange;
+      case 'Length of stay':
+        const handleDaysMetricChange = e => {
+          const newValue = e.target.value;
+          const metric = getMetricById(parseInt(newValue));
+          this.selectedDaysMetric = metric;
+        };
+        return handleDaysMetricChange;
+    }
   }
 
   handleSelectedCategory(e) {
@@ -220,6 +411,12 @@ export class HealthcareTimeSeries extends LitElement {
       }
       #caredays-chart {
         background-color: lightyellow;
+      }
+      .selection-radio {
+        width: 100%;
+        display: flex;
+        align-content: center;
+        justify-content: center;
       }
     `,
   ];

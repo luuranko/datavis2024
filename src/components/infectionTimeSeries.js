@@ -92,7 +92,7 @@ export class InfectionTimeSeries extends LitElement {
             r => !prevRegions.includes(r)
           );
           // Situation where existing series is named by its disease, not region
-          if (prevRegions.length === 1) {
+          if (prevRegions.length === 1 && this.chart.series.length === 1) {
             this.chart.series[0].name = prevRegions[0];
             this.chart.series[0].options.id = prevRegions[0];
             this.chart.series[0].options.name = prevRegions[0];

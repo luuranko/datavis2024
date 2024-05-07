@@ -3,10 +3,12 @@ import '@shoelace-style/shoelace/dist/components/select/select.js';
 import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/radio-group/radio-group.js';
 import '@shoelace-style/shoelace/dist/components/radio/radio.js';
+import '@shoelace-style/shoelace/dist/components/tooltip/tooltip.js';
 import { getDiseaseList } from '../dataService';
 import './infectionTimeSeries';
 import './healthcareTimeSeries';
 import { minYear, maxYear } from '../globals';
+import { getAllMetricsGroupedByContext, getMetricById } from './categories';
 
 import { Task } from '@lit/task';
 export class ChartsSection extends LitElement {
@@ -15,19 +17,22 @@ export class ChartsSection extends LitElement {
     selectedDiseases: { type: Array },
     currentDisease: { type: String },
     healthcareCategory: { type: String },
+    currentHealthcareMetric: { type: Object },
+    healthcareContext: { type: String },
     startYear: { type: Number },
     endYear: { type: Number },
   };
 
   constructor() {
     super();
-    this.selectedRegions = ['North Karelia'];
-    this.selectedDiseases = ['Norovirus'];
+    this.selectedRegions = [];
+    this.selectedDiseases = [];
     this.currentDisease = null;
+    this.healthcareCategory = 'Visits';
+    this.healthcareContext = Object.keys(getAllMetricsGroupedByContext())[0];
+    this.currentHealthcareMetric = null;
     this.startYear = minYear;
     this.endYear = maxYear;
-    this.infectionData = {};
-    this.healthCareData = {};
     this.diseases = {};
   }
 
@@ -82,6 +87,8 @@ export class ChartsSection extends LitElement {
               .selectedRegions=${this.selectedRegions}
               .startYear=${this.startYear}
               .endYear=${this.endYear}
+              .currentCategory=${this.healthcareCategory}
+              .healthcareContext=${this.healthcareContext}
               @change-healthcare-category=${e =>
                 (this.healthcareCategory =
                   e.detail.healthcareCategory)}></healthcare-time-series>
@@ -163,7 +170,38 @@ export class ChartsSection extends LitElement {
   }
 
   getHealthcareFilters() {
-    return html` <div id="healthcare-filters"></div> `;
+    const metricsByContext = getAllMetricsGroupedByContext();
+    const contexts = Object.keys(metricsByContext);
+    return html`
+      <div id="healthcare-filters">
+        <sl-select
+          label="Select healthcare context"
+          value=${this.healthcareContext.replaceAll(' ', '_')}
+          name="Select healthcare context"
+          placement="bottom"
+          @sl-change=${e =>
+            (this.healthcareContext = e.target.value.replaceAll('_', ' '))}>
+          ${contexts.map(c => {
+            return html`
+              <sl-option value=${c.replaceAll(' ', '_')}>${c}</sl-option>
+            `;
+          })}
+        </sl-select>
+        <sl-select
+          label="Compare regions by"
+          value=${this.currentHealthcareMetric?.context ===
+          this.healthcareContext
+            ? this.currentHealthcareMetric?.id
+            : null}
+          name="Select healthcare metric"
+          placement="bottom"
+          @sl-change=${e => this.switchCurrentHealthcareMetric(e)}>
+          ${metricsByContext[this.healthcareContext].map(m => {
+            return html` <sl-option value=${m.id}>${m.name}</sl-option> `;
+          })}
+        </sl-select>
+      </div>
+    `;
   }
 
   switchCurrentDisease(e) {
@@ -174,6 +212,16 @@ export class ChartsSection extends LitElement {
       detail: { currentDisease: this.currentDisease.replaceAll('_', ' ') },
     };
     this.dispatchEvent(new CustomEvent('change-current-disease', options));
+  }
+
+  switchCurrentHealthcareMetric(e) {
+    this.currentHealthcareMetric = getMetricById(parseInt(e.target.value));
+    const options = {
+      bubbles: true,
+      composed: true,
+      detail: { healthcareMetric: this.currentHealthcareMetric },
+    };
+    this.dispatchEvent(new CustomEvent('change-healthcare-metric', options));
   }
 
   switchSelectedDiseases(e) {
@@ -217,6 +265,9 @@ export class ChartsSection extends LitElement {
         border-bottom: 2px solid grey;
         background-color: var(--sl-color-neutral-100);
       }
+      #healthcare-filters-container {
+        background-color: var(--sl-color-neutral-100);
+      }
       #timespan-selection {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -229,10 +280,18 @@ export class ChartsSection extends LitElement {
         display: flex;
         flex-direction: column;
         gap: 1rem;
+        height: 100%;
+      }
+      #healthcare-filters {
+        padding: 0.5rem;
+        height: 100%;
       }
       #diseases-chart {
         background-color: pink;
         border-bottom: 2px solid grey;
+      }
+      sl-tooltip {
+        --show-delay: 750;
       }
     `;
   }

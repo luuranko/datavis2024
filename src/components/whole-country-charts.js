@@ -1,19 +1,24 @@
 import { LitElement, html, css } from 'lit';
 import { Task } from '@lit/task';
-import { getEmptyMapData, getFinlandTopology } from '../dataService';
+import {
+  getEmptyMapData,
+  getFinlandTopology,
+  getHealthcareDataWholeCountry,
+} from '../dataService';
 import { getInfectionDataForWholeCountryOneYear } from '../dataService';
 import Highcharts from 'highcharts/highmaps';
 import '@shoelace-style/shoelace/dist/components/select/select.js';
 import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import { minYear, maxYear } from '../globals';
+import { getCategoryOfMetricById, healthcareCategories } from './categories';
 
 export class WholeCountryCharts extends LitElement {
   static get properties() {
     return {
       currentYear: { type: Number },
       currentDisease: { type: String },
-      currentHealthcareMetric: { type: String },
+      currentHealthcareMetric: { type: Object },
     };
   }
 
@@ -57,6 +62,10 @@ export class WholeCountryCharts extends LitElement {
         metric: this.currentHealthcareMetric,
       };
       if (this.currentHealthcareMetric) {
+        data.series = await getHealthcareDataWholeCountry(
+          this.currentHealthcareMetric.id,
+          this.currentYear
+        );
       } else {
         data.series = getEmptyMapData();
       }
@@ -134,9 +143,7 @@ export class WholeCountryCharts extends LitElement {
   }
 
   infectionMap() {
-    const pureValues = this.infectionData.series.map(entry => entry[1]);
-    const dataMin = pureValues.length > 0 ? Math.min(...pureValues) : null;
-    const dataMax = pureValues.length > 0 ? Math.max(...pureValues) : null;
+    const { dataMin, dataMax } = 0;
     const container = this.shadowRoot.querySelector('#country-infections');
     this.infectionChart = Highcharts.mapChart(container, {
       chart: {
@@ -193,9 +200,7 @@ export class WholeCountryCharts extends LitElement {
   }
 
   healthcareMap() {
-    const pureValues = this.healthCareData.series.map(entry => entry[1]);
-    const dataMin = pureValues.length > 0 ? Math.min(...pureValues) : null;
-    const dataMax = pureValues.length > 0 ? Math.max(...pureValues) : null;
+    const { dataMin, dataMax } = 0;
     const container = this.shadowRoot.querySelector('#country-healthcare');
     this.healthcareChart = Highcharts.mapChart(container, {
       chart: {
@@ -239,14 +244,14 @@ export class WholeCountryCharts extends LitElement {
       max: dataMax,
     });
     this.healthcareChart.series[0].setData(this.healthCareData.series);
+    const category = getCategoryOfMetricById(this.currentHealthcareMetric.id);
     this.healthcareChart.title.textStr = this.healthCareData.metric
-      ? `${this.healthCareData.metric.replaceAll('_', ' ')} in ${
-          this.healthCareData.year
-        }`
+      ? `${this.currentHealthcareMetric.name} in ${this.healthCareData.year}`
       : ``;
     this.healthcareChart.subtitle.textStr = this.healthCareData.metric
-      ? '???'
+      ? category.valueType
       : '';
+    this.healthcareChart.series[0].name = category.valueType;
     this.healthcareChart.tooltip.options.enabled = this.healthCareData.metric;
     this.healthcareChart.redraw();
   }
