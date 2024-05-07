@@ -10,7 +10,7 @@ import {
   getHealthcareDataForManyRegions,
   getHealthcareDataForRegionByCategory,
 } from '../dataService';
-import { getMetricById, getMetricsByCategoryAndContext } from './categories';
+import { getMetricById, getMetricsByCategoryAndContext } from '../categories';
 
 export class HealthcareTimeSeries extends LitElement {
   static properties = {
@@ -80,7 +80,31 @@ export class HealthcareTimeSeries extends LitElement {
     }
     if (changedProps.has('selectedRegions')) {
       const prevRegions = changedProps.get('selectedRegions');
-      shouldFetchData = true;
+      if (
+        prevRegions &&
+        prevRegions.length > this.selectedRegions.length &&
+        this.selectedRegions.length > 1
+      ) {
+        shouldFetchData = false;
+        const removableRegions = prevRegions.filter(
+          r => !this.selectedRegions.includes(r)
+        );
+        this.removeSeriesFromCharts(removableRegions);
+      } else if (
+        prevRegions &&
+        prevRegions.length === 1 &&
+        this.selectedRegions.length > 1
+      ) {
+        shouldFetchData = true;
+      } else {
+        shouldFetchData = true;
+        if (prevRegions && prevRegions.length < this.selectedRegions.length) {
+          shouldFetchAll = false;
+          regionsToFetch = this.selectedRegions.filter(
+            r => !prevRegions.includes(r)
+          );
+        }
+      }
     }
     if (changedProps.has('startYear') || changedProps.has('endYear')) {
       const prevStart = changedProps.get('startYear') || this.startYear;
@@ -110,19 +134,19 @@ export class HealthcareTimeSeries extends LitElement {
       } else if (this.selectedRegions.length === 1) {
         data.visits = await getHealthcareDataForRegionByCategory(
           'Visits',
-          this.selectedRegions[0],
+          newRegions,
           this.startYear,
           this.endYear
         );
         data.patients = await getHealthcareDataForRegionByCategory(
           'Patients',
-          this.selectedRegions[0],
+          newRegions,
           this.startYear,
           this.endYear
         );
         data.days = await getHealthcareDataForRegionByCategory(
           'Length of stay',
-          this.selectedRegions[0],
+          newRegions,
           this.startYear,
           this.endYear
         );
@@ -327,6 +351,36 @@ export class HealthcareTimeSeries extends LitElement {
     this.healthCareData.patients.forEach(s => this.patientsChart.addSeries(s));
     this.healthCareData.days.forEach(s => this.caredaysChart.addSeries(s));
     this.healthCareData.visits.forEach(s => this.visitsChart.addSeries(s));
+    this.patientsChart.redraw();
+    this.caredaysChart.redraw();
+    this.visitsChart.redraw();
+  }
+
+  updateChartsPartially(data) {
+    if (!this.patientsChart || !this.caredaysChart || !this.visitsChart) return;
+    const { visits, patients, days } = data;
+    visits.forEach(s => this.visitsChart.addSeries(s));
+    patients.forEach(s => this.patientsChart.addSeries(s));
+    days.forEach(s => this.caredaysChart.addSeries(s));
+    this.patientsChart.redraw();
+    this.caredaysChart.redraw();
+    this.visitsChart.redraw();
+  }
+
+  removeSeriesFromCharts(removableSeries = []) {
+    if (!this.patientsChart || !this.caredaysChart || !this.visitsChart) return;
+    if (removableSeries.length === this.visitsChart.series.length) {
+      while (this.patientsChart.series.length)
+        this.patientsChart.series[0].remove();
+      while (this.caredaysChart.series.length)
+        this.caredaysChart.series[0].remove();
+      while (this.visitsChart.series.length)
+        this.visitsChart.series[0].remove();
+    } else {
+      removableSeries.forEach(d => this.visitsChart.get(d).remove());
+      removableSeries.forEach(d => this.patientsChart.get(d).remove());
+      removableSeries.forEach(d => this.caredaysChart.get(d).remove());
+    }
     this.patientsChart.redraw();
     this.caredaysChart.redraw();
     this.visitsChart.redraw();

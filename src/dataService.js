@@ -1,5 +1,5 @@
 import { minYear, maxYear } from './globals';
-import { healthcareCategories } from './components/categories';
+import { healthcareCategories } from './categories';
 
 export const wellbeingToStateMap = {
   Uusimaa: 'Uusimaa',
@@ -41,81 +41,113 @@ const getSotkanetYearsFilterString = (startYear, endYear) => {
   }
   return years.join('');
 };
-// ind 127: total population in region
+
 const getUusimaaData = async () => {
-  uusimaaData = { population: {} };
-  const url = `https://sotkanet.fi/rest/1.1/json?indicator=${127}${getSotkanetYearsFilterString(
-    minYear,
-    maxYear
-  )}&genders=total`;
-  const res = await fetch(url);
-  const data = await res.json();
-  Object.values(data)
-    .filter(entry => entry.region === 488)
-    .forEach(entry => {
-      uusimaaData.population[entry.year] = entry.value;
-    });
+  const fromLocalStorage = localStorage.getItem('uusimaaData');
+  if (!fromLocalStorage) {
+    uusimaaData = { population: {} };
+    const url = `https://sotkanet.fi/rest/1.1/json?indicator=${127}${getSotkanetYearsFilterString(
+      minYear,
+      maxYear
+    )}&genders=total`;
+    const res = await fetch(url);
+    const data = await res.json();
+    Object.values(data)
+      .filter(entry => entry.region === 488)
+      .forEach(entry => {
+        uusimaaData.population[entry.year] = entry.value;
+      });
+    localStorage.setItem('uusimaaData', JSON.stringify(uusimaaData));
+  } else {
+    uusimaaData = JSON.parse(fromLocalStorage);
+  }
   return uusimaaData;
 };
 
 const getYearIndices = async () => {
-  yearIndices = {};
-  const res = await fetch(
-    `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?column=yearmonth-878344&filter=measure-877837`
-  );
-  const data = await res.json();
-  Object.keys(data.dataset.dimension.yearmonth.category.label).forEach(y => {
-    const name =
-      data.dataset.dimension.yearmonth.category.label[y].split('Year ')[1];
-    if (!name) yearIndices['all'] = y;
-    yearIndices[name] = y;
-  });
+  const fromLocalStorage = localStorage.getItem('yearIndices');
+  if (!fromLocalStorage) {
+    yearIndices = {};
+    const res = await fetch(
+      `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?column=yearmonth-878344&filter=measure-877837`
+    );
+    const data = await res.json();
+    Object.keys(data.dataset.dimension.yearmonth.category.label).forEach(y => {
+      const name =
+        data.dataset.dimension.yearmonth.category.label[y].split('Year ')[1];
+      if (!name) yearIndices['all'] = y;
+      yearIndices[name] = y;
+    });
+    localStorage.setItem('yearIndices', JSON.stringify(yearIndices));
+  } else {
+    yearIndices = JSON.parse(fromLocalStorage);
+  }
   return yearIndices;
 };
 
 const getDiseaseIndices = async () => {
-  diseaseIndices = {};
-  const res = await fetch(
-    `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=nidrreportgroup-878152&filter=measure-877837`
-  );
-  const data = await res.json();
-  Object.keys(data.dataset.dimension.nidrreportgroup.category.label).forEach(
-    y => {
-      const name = data.dataset.dimension.nidrreportgroup.category.label[y];
-      diseaseIndices[name] = y;
-    }
-  );
+  const fromLocalStorage = localStorage.getItem('diseaseIndices');
+  if (!fromLocalStorage) {
+    diseaseIndices = {};
+    const res = await fetch(
+      `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=nidrreportgroup-878152&filter=measure-877837`
+    );
+    const data = await res.json();
+    Object.keys(data.dataset.dimension.nidrreportgroup.category.label).forEach(
+      y => {
+        const name = data.dataset.dimension.nidrreportgroup.category.label[y];
+        diseaseIndices[name] = y;
+      }
+    );
+    localStorage.setItem('diseaseIndices', JSON.stringify(diseaseIndices));
+  } else {
+    diseaseIndices = JSON.parse(fromLocalStorage);
+  }
   return diseaseIndices;
 };
 
 const getRegionIndices = async () => {
-  regionIndices = {};
-  const res = await fetch(
-    `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=wscmunicipality2022-877686&filter=measure-877837`
-  );
-  const data = await res.json();
-  Object.keys(
-    data.dataset.dimension.wscmunicipality2022.category.label
-  ).forEach(y => {
-    const base = data.dataset.dimension.wscmunicipality2022.category.label[y];
-    const name =
-      base.split(' wellbeing services county').length > 0
-        ? base.split(' wellbeing services county')[0]
-        : base;
-    regionIndices[name] = y;
-  });
+  const fromLocalStorage = localStorage.getItem('regionIndices');
+  if (!fromLocalStorage) {
+    regionIndices = {};
+    const res = await fetch(
+      `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=wscmunicipality2022-877686&filter=measure-877837`
+    );
+    const data = await res.json();
+    Object.keys(
+      data.dataset.dimension.wscmunicipality2022.category.label
+    ).forEach(y => {
+      const base = data.dataset.dimension.wscmunicipality2022.category.label[y];
+      const name =
+        base.split(' wellbeing services county').length > 0
+          ? base.split(' wellbeing services county')[0]
+          : base;
+      regionIndices[name] = y;
+    });
+    localStorage.setItem('regionIndices', JSON.stringify(regionIndices));
+  } else {
+    regionIndices = JSON.parse(fromLocalStorage);
+  }
   return regionIndices;
 };
 
 const getSotkanetCountyIndices = async () => {
-  sotkanetCountyIndices = {};
-  const url = `https://sotkanet.fi/rest/1.1/regions`;
-  const res = await fetch(url);
-  const data = await res.json();
-  data
-    .filter(entry => entry.category === 'MAAKUNTA')
-    .forEach(entry => (sotkanetCountyIndices[entry.title.en] = entry.id));
-  console.log(sotkanetCountyIndices);
+  const fromLocalStorage = localStorage.getItem('sotkanetCountyIndices');
+  if (!fromLocalStorage) {
+    sotkanetCountyIndices = {};
+    const url = `https://sotkanet.fi/rest/1.1/regions`;
+    const res = await fetch(url);
+    const data = await res.json();
+    data
+      .filter(entry => entry.category === 'MAAKUNTA')
+      .forEach(entry => (sotkanetCountyIndices[entry.title.en] = entry.id));
+    localStorage.setItem(
+      'sotkanetCountyIndices',
+      JSON.stringify(sotkanetCountyIndices)
+    );
+  } else {
+    sotkanetCountyIndices = JSON.parse(fromLocalStorage);
+  }
   return sotkanetCountyIndices;
 };
 
@@ -128,20 +160,30 @@ export const getDiseaseList = () => {
 };
 
 export const setUpIndices = async () => {
-  if (!finlandTopology) {
-    finlandTopology = await fetch(
-      'https://code.highcharts.com/mapdata/countries/fi/fi-all.topo.json'
-    ).then(response => response.json());
-  }
-  if (!uusimaaData) {
-    await getUusimaaData();
-  }
+  const start = new Date();
+  if (!finlandTopology) await setUpFinlandTopology();
+  if (!uusimaaData) await getUusimaaData();
   if (!yearIndices) yearIndices = await getYearIndices();
   if (!diseaseIndices) diseaseIndices = await getDiseaseIndices();
   if (!regionIndices) regionIndices = await getRegionIndices();
   if (!sotkanetCountyIndices)
     sotkanetCountyIndices = await getSotkanetCountyIndices();
+  const end = new Date();
+  const time = end - start;
+  console.log(time, 'ms');
   console.log('Finished setting up base data and indices.');
+};
+
+const setUpFinlandTopology = async () => {
+  const fromLocalStorage = localStorage.getItem('finlandTopology');
+  if (!fromLocalStorage) {
+    finlandTopology = await fetch(
+      'https://code.highcharts.com/mapdata/countries/fi/fi-all.topo.json'
+    ).then(response => response.json());
+    localStorage.setItem('finlandTopology', JSON.stringify(finlandTopology));
+  } else {
+    finlandTopology = JSON.parse(fromLocalStorage);
+  }
 };
 
 export const getFinlandTopology = () => {

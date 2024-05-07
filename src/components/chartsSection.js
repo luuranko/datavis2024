@@ -8,7 +8,7 @@ import { getDiseaseList } from '../dataService';
 import './infectionTimeSeries';
 import './healthcareTimeSeries';
 import { minYear, maxYear } from '../globals';
-import { getAllMetricsGroupedByContext, getMetricById } from './categories';
+import { getAllMetricsGroupedByContext, getMetricById } from '../categories';
 
 import { Task } from '@lit/task';
 export class ChartsSection extends LitElement {
@@ -284,6 +284,9 @@ export class ChartsSection extends LitElement {
       }
       #healthcare-filters {
         padding: 0.5rem;
+        gap: 1rem;
+        display: flex;
+        flex-direction: column;
         height: 100%;
       }
       #diseases-chart {

@@ -11,7 +11,7 @@ import '@shoelace-style/shoelace/dist/components/select/select.js';
 import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import { minYear, maxYear } from '../globals';
-import { getCategoryOfMetricById, healthcareCategories } from './categories';
+import { getCategoryOfMetricById, healthcareCategories } from '../categories';
 
 export class WholeCountryCharts extends LitElement {
   static get properties() {
