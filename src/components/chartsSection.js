@@ -4,13 +4,12 @@ import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/radio-group/radio-group.js';
 import '@shoelace-style/shoelace/dist/components/radio/radio.js';
 import '@shoelace-style/shoelace/dist/components/tooltip/tooltip.js';
-import { getDiseaseList } from '../dataService';
+import { diseases, findDiseaseByIndex } from '../diseases';
 import './infectionTimeSeries';
 import './healthcareTimeSeries';
 import { minYear, maxYear } from '../globals';
 import { getAllMetricsGroupedByContext, getMetricById } from '../categories';
 
-import { Task } from '@lit/task';
 export class ChartsSection extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
@@ -33,37 +32,10 @@ export class ChartsSection extends LitElement {
     this.currentHealthcareMetric = null;
     this.startYear = minYear;
     this.endYear = maxYear;
-    this.diseases = {};
   }
-
-  async connectedCallback() {
-    super.connectedCallback();
-    await this._setUpTask.run();
-  }
-
-  _setUpTask = new Task(this, {
-    task: async () => {
-      this.diseases = getDiseaseList();
-    },
-    args: () => [],
-    autoRun: false,
-  });
-
-  _fetchHealthcareDataTask = new Task(this, {
-    task: async () => {
-      this.healthCareData = {};
-      return this.healthCareData;
-    },
-    args: () => [this.selectedRegions, this.startYear, this.endYear],
-  });
 
   render() {
-    return this._setUpTask.render({
-      initial: () => html`Loading`,
-      pending: () => html`Loading`,
-      complete: () => this.getContent(),
-      error: e => html`Error ${e}`,
-    });
+    return this.getContent();
   }
 
   getContent() {
@@ -134,12 +106,12 @@ export class ChartsSection extends LitElement {
   }
 
   getDiseaseFilters() {
-    const options = Object.keys(this.diseases).map(d => {
-      return html`<sl-option value=${this.diseases[d]}>${d}</sl-option>`;
+    const options = diseases.map(d => {
+      return html`<sl-option value=${`${d.index}`}
+        >${d.displayName}</sl-option
+      >`;
     });
-    const selectedValue = this.selectedDiseases.map(d =>
-      d.replaceAll(' ', '_')
-    );
+    const selectedValue = this.selectedDiseases.map(d => `${d.index}`);
     return html`<div id="diseases-selection">
       <sl-select
         label="Select diseases"
@@ -156,13 +128,13 @@ export class ChartsSection extends LitElement {
   getSelectCurrentDiseaseFilter() {
     if (this.selectedDiseases.length < 2 || !this.currentDisease) return '';
     const selectedOptions = this.selectedDiseases.map(d => {
-      return html`<sl-radio value=${d}>${d.replaceAll('_', ' ')}</sl-radio>`;
+      return html`<sl-radio value=${`${d.index}`}>${d.displayName}</sl-radio>`;
     });
     return html`
       <sl-radio-group
         label="Compare regions by"
         name="Select current disease"
-        value=${this.currentDisease}
+        value=${`${this.currentDisease.index}`}
         @sl-change=${e => this.switchCurrentDisease(e)}>
         ${selectedOptions}
       </sl-radio-group>
@@ -205,11 +177,11 @@ export class ChartsSection extends LitElement {
   }
 
   switchCurrentDisease(e) {
-    this.currentDisease = e.target.value;
+    this.currentDisease = findDiseaseByIndex(parseInt(e.target.value));
     const options = {
       bubbles: true,
       composed: true,
-      detail: { currentDisease: this.currentDisease.replaceAll('_', ' ') },
+      detail: { currentDisease: this.currentDisease },
     };
     this.dispatchEvent(new CustomEvent('change-current-disease', options));
   }
@@ -225,9 +197,9 @@ export class ChartsSection extends LitElement {
   }
 
   switchSelectedDiseases(e) {
-    this.selectedDiseases = Array.isArray(e.target.value)
-      ? e.target.value
-      : [e.target.value];
+    this.selectedDiseases = e.target.value.map(ind =>
+      findDiseaseByIndex(parseInt(ind))
+    );
     if (this.selectedDiseases.length > 0) {
       if (
         !this.currentDisease ||
@@ -243,7 +215,7 @@ export class ChartsSection extends LitElement {
       composed: true,
       detail: {
         diseases: this.selectedDiseases,
-        currentDisease: this.currentDisease?.replaceAll('_', ' '),
+        currentDisease: this.currentDisease,
       },
     };
     this.dispatchEvent(new CustomEvent('change-selected-diseases', options));

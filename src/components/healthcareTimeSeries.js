@@ -460,12 +460,6 @@ export class HealthcareTimeSeries extends LitElement {
       #container {
         height: 45vh;
       }
-      #patients-chart {
-        background-color: lightgreen;
-      }
-      #caredays-chart {
-        background-color: lightyellow;
-      }
       .selection-radio {
         width: 100%;
         display: flex;

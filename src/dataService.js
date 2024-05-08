@@ -1,5 +1,6 @@
 import { minYear, maxYear } from './globals';
 import { healthcareCategories } from './categories';
+import { diseases } from './diseases';
 
 export const wellbeingToStateMap = {
   Uusimaa: 'Uusimaa',
@@ -28,7 +29,6 @@ export const wellbeingToStateMap = {
 };
 
 let yearIndices = null;
-let diseaseIndices = null;
 let regionIndices = null;
 let sotkanetCountyIndices = null;
 let finlandTopology = null;
@@ -85,27 +85,6 @@ const getYearIndices = async () => {
   return yearIndices;
 };
 
-const getDiseaseIndices = async () => {
-  const fromLocalStorage = localStorage.getItem('diseaseIndices');
-  if (!fromLocalStorage) {
-    diseaseIndices = {};
-    const res = await fetch(
-      `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=nidrreportgroup-878152&filter=measure-877837`
-    );
-    const data = await res.json();
-    Object.keys(data.dataset.dimension.nidrreportgroup.category.label).forEach(
-      y => {
-        const name = data.dataset.dimension.nidrreportgroup.category.label[y];
-        diseaseIndices[name] = y;
-      }
-    );
-    localStorage.setItem('diseaseIndices', JSON.stringify(diseaseIndices));
-  } else {
-    diseaseIndices = JSON.parse(fromLocalStorage);
-  }
-  return diseaseIndices;
-};
-
 const getRegionIndices = async () => {
   const fromLocalStorage = localStorage.getItem('regionIndices');
   if (!fromLocalStorage) {
@@ -151,27 +130,16 @@ const getSotkanetCountyIndices = async () => {
   return sotkanetCountyIndices;
 };
 
-export const getDiseaseList = () => {
-  const list = {};
-  Object.keys(diseaseIndices)
-    .toSorted()
-    .forEach(d => (list[d] = d.replaceAll(' ', '_')));
-  return list;
-};
-
 export const setUpIndices = async () => {
   const start = new Date();
   if (!finlandTopology) await setUpFinlandTopology();
   if (!uusimaaData) await getUusimaaData();
   if (!yearIndices) yearIndices = await getYearIndices();
-  if (!diseaseIndices) diseaseIndices = await getDiseaseIndices();
   if (!regionIndices) regionIndices = await getRegionIndices();
   if (!sotkanetCountyIndices)
     sotkanetCountyIndices = await getSotkanetCountyIndices();
   const end = new Date();
   const time = end - start;
-  console.log(time, 'ms');
-  console.log('Finished setting up base data and indices.');
 };
 
 const setUpFinlandTopology = async () => {
@@ -219,11 +187,10 @@ const getYearFilter = (startYear, endYear = null) => {
 };
 
 const getDiseaseFilter = diseases => {
-  if (!Array.isArray(diseases))
-    return `${diseaseIndices[diseases.replaceAll('_', ' ')]}.`;
+  if (!Array.isArray(diseases)) return `${diseases.index}.`;
   return diseases.length === 1
-    ? `${diseaseIndices[diseases[0].replaceAll('_', ' ')]}.`
-    : diseases.map(d => diseaseIndices[d]).join('.');
+    ? `${diseases.index}.`
+    : diseases.map(d => d.index).join('.');
 };
 
 const getRegionFilter = regions => {
@@ -250,9 +217,9 @@ export const getInfectionIncidenceManyDiseases = async (
       endYear
     );
     series.push({
-      name: diseases[i].replaceAll('_', ' '),
+      name: diseases[i].displayName,
       data: data,
-      id: diseases[i],
+      id: diseases[i].index,
     });
   }
   return series;

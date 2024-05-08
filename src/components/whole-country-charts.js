@@ -11,7 +11,7 @@ import '@shoelace-style/shoelace/dist/components/select/select.js';
 import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import { minYear, maxYear } from '../globals';
-import { getCategoryOfMetricById, healthcareCategories } from '../categories';
+import { getCategoryOfMetricById } from '../categories';
 
 export class WholeCountryCharts extends LitElement {
   static get properties() {
@@ -188,9 +188,7 @@ export class WholeCountryCharts extends LitElement {
     });
     this.infectionChart.series[0].setData(this.infectionData.series);
     this.infectionChart.title.textStr = this.infectionData.disease
-      ? `${this.infectionData.disease.replaceAll('_', ' ')} in ${
-          this.infectionData.year
-        }`
+      ? `${this.infectionData.disease.displayName} in ${this.infectionData.year}`
       : ``;
     this.infectionChart.subtitle.textStr = this.infectionData.disease
       ? 'Cases per 100 000 inhabitants'
@@ -276,7 +274,7 @@ export class WholeCountryCharts extends LitElement {
         height: 45vh;
       }
       #country-healthcare {
-        background-color: pink;
+        height: 45vh;
       }
       sl-select {
         width: 8rem;

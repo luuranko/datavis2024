@@ -48,9 +48,9 @@ export class InfectionTimeSeries extends LitElement {
         prevDiseases.length > this.selectedDiseases.length
       ) {
         shouldFetchData = false;
-        const removableDiseases = prevDiseases.filter(
-          d => !this.selectedDiseases.includes(d)
-        );
+        const removableDiseases = prevDiseases
+          .filter(d => !this.selectedDiseases.includes(d))
+          .map(d => d.index);
         this.updateChartPartially([], removableDiseases);
         alreadyMadeChanges = true;
       } else if (
@@ -70,7 +70,8 @@ export class InfectionTimeSeries extends LitElement {
       const prevRegions = changedProps.get('selectedRegions');
       if (
         this.currentDisease &&
-        prevRegions.length > this.selectedRegions.length
+        prevRegions.length > this.selectedRegions.length &&
+        this.selectedRegions.length > 1
       ) {
         shouldFetchData = false;
         const removableRegions = prevRegions.filter(
@@ -103,12 +104,10 @@ export class InfectionTimeSeries extends LitElement {
       }
     }
     if (changedProps.has('currentDisease') && !alreadyMadeChanges) {
-      console.log('has currentdisease');
       if (
         changedProps.has('selectedDiseases') ||
         this.selectedRegions.length > 1
       ) {
-        console.log('should fetch data');
         shouldFetchData = true;
       }
     }
@@ -134,7 +133,6 @@ export class InfectionTimeSeries extends LitElement {
 
   _fetchInfectionDataTask = new Task(this, {
     task: async ([fetchAll, newDiseases, newRegions]) => {
-      console.log('Running fetchInfectionDataTask, fetchAll:', fetchAll);
       let data = [];
       if (
         this.selectedRegions.length === 0 ||
@@ -210,8 +208,8 @@ export class InfectionTimeSeries extends LitElement {
   getChartTitle() {
     const diseaseString = this.currentDisease
       ? this.selectedRegions.length === 1
-        ? this.selectedDiseases.map(d => d.replaceAll('_', ' ')).join('; ')
-        : this.currentDisease.replaceAll('_', ' ')
+        ? this.selectedDiseases.map(d => d.displayName).join('; ')
+        : this.currentDisease.displayName
       : '';
     const regions =
       this.selectedRegions.length > 0 ? this.selectedRegions.join(', ') : '';
