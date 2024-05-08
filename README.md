@@ -6,6 +6,12 @@ Tool for visualizing data for infectious diseases and healthcare in Finland
 
 Online link: [Render](https://datavisproject2024.onrender.com/)
 
+## Local installation
+
+System requirements: Node 20+, npm version 10+ Clone the project and run
+`npm install` in project root. Then run `npm run dev` and open the specified
+localhost port (5173 by default).
+
 ## Data sources
 
 Infectious diseases data by

@@ -43,7 +43,7 @@ export class ChartsSection extends LitElement {
       <div id="page">
         ${this.getYearSelection()}
         <div class="charts">
-          <div id="diseases-chart" class="chart-container">
+          <div id="diseases-chart" class="has-section-divider">
             <infection-time-series
               .selectedDiseases=${this.selectedDiseases}
               .currentDisease=${this.currentDisease}
@@ -51,7 +51,7 @@ export class ChartsSection extends LitElement {
               .startYear=${this.startYear}
               .endYear=${this.endYear}></infection-time-series>
           </div>
-          <div id="disease-selection-container">
+          <div class="filter-container has-section-divider">
             ${this.getDiseaseFilters()}
           </div>
           <div id="healthcare">
@@ -65,9 +65,7 @@ export class ChartsSection extends LitElement {
                 (this.healthcareCategory =
                   e.detail.healthcareCategory)}></healthcare-time-series>
           </div>
-          <div id="healthcare-filters-container">
-            ${this.getHealthcareFilters()}
-          </div>
+          <div class="filter-container ">${this.getHealthcareFilters()}</div>
         </div>
       </div>
     `;
@@ -81,29 +79,44 @@ export class ChartsSection extends LitElement {
       }
       return years;
     };
-    const changeStartYear = year => {
-      if (year <= this.endYear) this.startYear = parseInt(year);
-    };
-    const changeEndYear = year => {
-      if (year >= this.startYear) this.endYear = parseInt(year);
-    };
     return html`
       <div id="timespan-selection">
         <sl-select
           label="Select start year"
           value=${this.startYear}
-          @sl-change=${e => changeStartYear(e.target.value)}>
-          ${getYears(minYear, this.endYear)}
+          @sl-change=${e => this.changeStartYear(e.target.value)}>
+          ${getYears(minYear, this.endYear - 1)}
         </sl-select>
         <sl-select
           label="Select end year"
           value=${this.endYear}
-          @sl-change=${e => changeEndYear(e.target.value)}>
-          ${getYears(this.startYear, maxYear)}
+          @sl-change=${e => this.changeEndYear(e.target.value)}>
+          ${getYears(this.startYear + 1, maxYear)}
         </sl-select>
       </div>
     `;
   }
+
+  changeStartYear = year => {
+    if (year >= this.endYear) return;
+    this.startYear = parseInt(year);
+    const options = {
+      bubbles: true,
+      composed: true,
+      detail: { startYear: this.startYear },
+    };
+    this.dispatchEvent(new CustomEvent('change-start-year', options));
+  };
+  changeEndYear = year => {
+    if (year <= this.startYear) return;
+    this.endYear = parseInt(year);
+    const options = {
+      bubbles: true,
+      composed: true,
+      detail: { endYear: this.endYear },
+    };
+    this.dispatchEvent(new CustomEvent('change-end-year', options));
+  };
 
   getDiseaseFilters() {
     const options = diseases.map(d => {
@@ -231,13 +244,10 @@ export class ChartsSection extends LitElement {
         display: grid;
         grid: 1fr 1fr / 3fr 1fr;
       }
-      #healthcare {
-      }
-      #disease-selection-container {
+      .has-section-divider {
         border-bottom: 2px solid grey;
-        background-color: var(--sl-color-neutral-100);
       }
-      #healthcare-filters-container {
+      .filter-container {
         background-color: var(--sl-color-neutral-100);
       }
       #timespan-selection {
@@ -247,26 +257,13 @@ export class ChartsSection extends LitElement {
         min-width: min-content;
         max-width: 30rem;
       }
-      #diseases-selection {
-        padding: 0.5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        height: 100%;
-      }
+      #diseases-selection,
       #healthcare-filters {
         padding: 0.5rem;
-        gap: 1rem;
         display: flex;
         flex-direction: column;
+        gap: 1rem;
         height: 100%;
-      }
-      #diseases-chart {
-        background-color: pink;
-        border-bottom: 2px solid grey;
-      }
-      sl-tooltip {
-        --show-delay: 750;
       }
     `;
   }

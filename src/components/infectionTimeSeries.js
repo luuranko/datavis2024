@@ -190,6 +190,7 @@ export class InfectionTimeSeries extends LitElement {
     while (this.chart.series.length) this.chart.series[0].remove();
     this.infectionData.forEach(s => this.chart.addSeries(s));
     this.chart.title.textStr = this.getChartTitle();
+    this.chart.xAxis[0].setExtremes(this.startYear, this.endYear);
     this.chart.redraw();
   }
 
@@ -202,6 +203,7 @@ export class InfectionTimeSeries extends LitElement {
     }
     addSeries.forEach(s => this.chart.addSeries(s));
     this.chart.title.textStr = this.getChartTitle();
+    this.chart.xAxis[0].setExtremes(this.startYear, this.endYear);
     this.chart.redraw();
   }
 
@@ -223,11 +225,14 @@ export class InfectionTimeSeries extends LitElement {
   }
 
   hasDataForSelectedTimespan() {
-    if (!this.chart) return false;
-    const firstYearInData = this.infectionData[0][0];
-    const lastYearInData = this.infectionData[this.infectionData.length - 1][0];
-    if (firstYearInData > this.startYear || lastYearInData < this.endYear)
-      return false;
+    if (!this.chart || this.chart.series.length === 0) return false;
+    const hasDataForStartYear = this.infectionData.find(
+      d => d[0] === this.startYear
+    );
+    const hasDataForEndYear = this.infectionData.find(
+      d => d[0] === this.endYear
+    );
+    if (!hasDataForStartYear || !hasDataForEndYear) return false;
     return true;
   }
 
@@ -238,7 +243,7 @@ export class InfectionTimeSeries extends LitElement {
       credits: { enabled: false },
       subtitle: { text: 'Infections per 100 000 inhabitants' },
       yAxis: { title: { text: 'Infections' } },
-      xAxis: { tickInterval: 1 },
+      xAxis: { tickInterval: 1, minRange: 1 },
       legend: {
         layout: 'horizontal',
         align: 'right',

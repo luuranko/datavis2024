@@ -41,15 +41,6 @@ export class MyElement extends LitElement {
   });
 
   render() {
-    console.log(
-      'App root current params:',
-      this.selectedRegions,
-      this.selectedDiseases,
-      this.currentDisease,
-      this.currentHealthcareMetric,
-      this.startYear,
-      this.endYear
-    );
     return html` <div id="page">
       ${this._setUpTask.render({
         initial: () => html`Loading page`,
@@ -63,6 +54,8 @@ export class MyElement extends LitElement {
             .selectedDiseases=${this.selectedDiseases}
             .startYear=${this.startYear}
             .endYear=${this.endYear}
+            @change-start-year=${e => (this.startYear = e.detail.startYear)}
+            @change-end-year=${e => (this.endYear = e.detail.endYear)}
             @change-selected-diseases=${e => {
               this.selectedDiseases = e.detail.diseases;
               this.currentDisease = e.detail.currentDisease;

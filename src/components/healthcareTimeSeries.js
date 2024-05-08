@@ -351,6 +351,9 @@ export class HealthcareTimeSeries extends LitElement {
     this.healthCareData.patients.forEach(s => this.patientsChart.addSeries(s));
     this.healthCareData.days.forEach(s => this.caredaysChart.addSeries(s));
     this.healthCareData.visits.forEach(s => this.visitsChart.addSeries(s));
+    this.patientsChart.xAxis[0].setExtremes(this.startYear, this.endYear);
+    this.visitsChart.xAxis[0].setExtremes(this.startYear, this.endYear);
+    this.caredaysChart.xAxis[0].setExtremes(this.startYear, this.endYear);
     this.patientsChart.redraw();
     this.caredaysChart.redraw();
     this.visitsChart.redraw();
@@ -396,11 +399,16 @@ export class HealthcareTimeSeries extends LitElement {
   hasDataForSelectedTimespan() {
     if (!this.patientsChart || !this.caredaysChart || !this.visitsChart)
       return false;
-    const firstYearInData = this.healthCareData.visits[0][0];
-    const lastYearInData =
-      this.healthCareData.visits[this.healthCareData.visits.length - 1][0];
-    if (firstYearInData > this.startYear || lastYearInData < this.endYear)
-      return false;
+    if (this.visitsChart.series.length === 0) return false;
+    const hasDataForStartYear = this.healthCareData.visits
+      .map(d => d.data)
+      .flat()
+      .find(d => d[0] === this.startYear);
+    const hasDataForEndYear = this.healthCareData.visits
+      .map(d => d.data)
+      .flat()
+      .find(d => d[0] === this.endYear);
+    if (!hasDataForStartYear || !hasDataForEndYear) return false;
     return true;
   }
 
@@ -411,7 +419,7 @@ export class HealthcareTimeSeries extends LitElement {
       credits: { enabled: false },
       subtitle: { text: 'Visits per 1000 inhabitants' },
       yAxis: { title: { text: 'Visits' } },
-      xAxis: { tickInterval: 1 },
+      xAxis: { tickInterval: 1, minRange: 1 },
       legend: {
         layout: 'horizontal',
         align: 'right',
@@ -428,7 +436,7 @@ export class HealthcareTimeSeries extends LitElement {
       credits: { enabled: false },
       subtitle: { text: 'Patients per 1000 inhabitants' },
       yAxis: { title: { text: 'Patients' } },
-      xAxis: { tickInterval: 1 },
+      xAxis: { tickInterval: 1, minRange: 1 },
       legend: {
         layout: 'horizontal',
         align: 'right',
@@ -445,7 +453,7 @@ export class HealthcareTimeSeries extends LitElement {
       credits: { enabled: false },
       subtitle: { text: 'Avg. length of stay' },
       yAxis: { title: { text: 'Days' } },
-      xAxis: { tickInterval: 1 },
+      xAxis: { tickInterval: 1, minRange: 1 },
       legend: {
         layout: 'horizontal',
         align: 'right',

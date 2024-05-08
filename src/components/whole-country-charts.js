@@ -25,7 +25,7 @@ export class WholeCountryCharts extends LitElement {
   constructor() {
     super();
     this.currentYear = maxYear;
-    this.finlandTopology = null;
+    this.finlandTopology = getFinlandTopology();
     this.currentDisease = null;
     this.currentHealthcareMetric = null;
     this.infectionData = null;
@@ -34,7 +34,6 @@ export class WholeCountryCharts extends LitElement {
 
   _fetchInfectionDataTask = new Task(this, {
     task: async () => {
-      if (!this.finlandTopology) this.finlandTopology = getFinlandTopology();
       const data = {
         year: this.currentYear,
         disease: this.currentDisease,
@@ -56,7 +55,6 @@ export class WholeCountryCharts extends LitElement {
 
   _fetchHealthcareDataTask = new Task(this, {
     task: async () => {
-      if (!this.finlandTopology) this.finlandTopology = getFinlandTopology();
       const data = {
         year: this.currentYear,
         metric: this.currentHealthcareMetric,
@@ -242,14 +240,14 @@ export class WholeCountryCharts extends LitElement {
       max: dataMax,
     });
     this.healthcareChart.series[0].setData(this.healthCareData.series);
-    const category = getCategoryOfMetricById(this.currentHealthcareMetric.id);
-    this.healthcareChart.title.textStr = this.healthCareData.metric
+    const category = getCategoryOfMetricById(this.currentHealthcareMetric?.id);
+    this.healthcareChart.title.textStr = this.currentHealthcareMetric
       ? `${this.currentHealthcareMetric.name} in ${this.healthCareData.year}`
       : ``;
-    this.healthcareChart.subtitle.textStr = this.healthCareData.metric
+    this.healthcareChart.subtitle.textStr = this.currentHealthcareMetric
       ? category.valueType
       : '';
-    this.healthcareChart.series[0].name = category.valueType;
+    this.healthcareChart.series[0].name = category?.valueType;
     this.healthcareChart.tooltip.options.enabled = this.healthCareData.metric;
     this.healthcareChart.redraw();
   }
