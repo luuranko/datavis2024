@@ -8,6 +8,7 @@ import '@shoelace-style/shoelace/dist/components/popup/popup.js';
 import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 import { maxYear, minYear } from './globals';
+import { commonStyles } from './components/commonStyles';
 
 export class MyElement extends LitElement {
   static properties = {
@@ -43,8 +44,8 @@ export class MyElement extends LitElement {
   render() {
     return html` <div id="page">
       ${this._setUpTask.render({
-        initial: () => html`Loading page`,
-        pending: () => html`Loading page...`,
+        initial: () => html`<div class="loader"><span>Loading...</span></div>`,
+        pending: () => html`<div class="loader"><span>Loading...</span></div>`,
         complete: () => html`
           <selection-from-map
             @change-selected-regions=${e =>
@@ -109,8 +110,8 @@ export class MyElement extends LitElement {
     </div>`;
   }
 
-  static get styles() {
-    return css`
+  static styles = [
+    css`
       :host {
         height: 100vh;
         padding: 1rem;
@@ -118,7 +119,6 @@ export class MyElement extends LitElement {
       }
       #map-container {
         width: 100%;
-        border: 1px dotted grey;
       }
       #page {
         display: grid;
@@ -126,17 +126,18 @@ export class MyElement extends LitElement {
         column-gap: 1rem;
         height: 100%;
         width: 100%;
+        position: relative;
       }
       #whole-country-data {
         width: 100%;
-        border: 1px dotted grey;
       }
       .credits {
         font-size: 0.7rem;
         max-width: 30rem;
       }
-    `;
-  }
+    `,
+    commonStyles,
+  ];
 }
 
 window.customElements.define('app-root', MyElement);

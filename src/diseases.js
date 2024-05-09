@@ -491,25 +491,24 @@ export const diseases = [
   { index: 877665, name: 'Zika virus', displayName: 'Zika fever', category: 1 },
 ];
 
-// export const getDiseaseList = () => {
-//   const list = {};
-//   // Object.keys(diseaseIndices)
-//   //   .toSorted()
-//   //   .forEach(d => (list[d] = d.replaceAll(' ', '_')));
-//   return list;
-// };
-
 export const findDiseaseByIndex = index => {
   return diseases.find(d => d.index === index);
 };
 
 export const diseaseCategories = [
-  { id: 0, name: 'Sexually transmitted diseases' },
   { id: 1, name: 'Respiratory infections and tuberculosis' },
   { id: 2, name: 'Pox diseases' },
   { id: 3, name: 'Diarrhoeal diseases' },
+  { id: 0, name: 'Sexually transmitted diseases' },
   { id: 5, name: 'Meningitis' },
   { id: 6, name: 'Other' },
 ];
 
-export const diseasesByCategory = () => {};
+export const diseasesByCategory = () => {
+  const categories = [{ id: 7, name: 'All diseases' }, ...diseaseCategories];
+  categories.forEach(c => {
+    c.diseases = diseases.filter(d => d.category === c.id);
+  });
+  categories[0].diseases = diseases;
+  return categories;
+};

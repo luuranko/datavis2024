@@ -17,10 +17,6 @@ export class SelectionFromMap extends LitElement {
     super();
     this.selectedRegions = [];
     this.chart = null;
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
     this.finlandTopology = getFinlandTopology();
   }
 

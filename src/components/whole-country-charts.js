@@ -12,6 +12,7 @@ import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import { minYear, maxYear } from '../globals';
 import { getCategoryOfMetricById } from '../categories';
+import { commonStyles } from './commonStyles';
 
 export class WholeCountryCharts extends LitElement {
   static get properties() {
@@ -78,21 +79,25 @@ export class WholeCountryCharts extends LitElement {
       <div id="page">
         ${this.getYearSelection()}
         <div id="charts">
-          <div id="country-infections"></div>
-          <div id="country-healthcare"></div>
+          <div class="chart-container">
+            <div id="country-infections" class="chart-section-height"></div>
+            ${this._fetchInfectionDataTask.render({
+              initial: () => html`waiting...`,
+              pending: () => html`<div class="loader"></div>`,
+              complete: () => '',
+              error: e => html`error ${e}`,
+            })}
+          </div>
+          <div class="chart-container">
+            <div id="country-healthcare" class="chart-section-height"></div>
+            ${this._fetchHealthcareDataTask.render({
+              initial: () => html`waiting...`,
+              pending: () => html`<div class="loader"></div>`,
+              complete: () => '',
+              error: e => html`error ${e}`,
+            })}
+          </div>
         </div>
-        ${this._fetchInfectionDataTask.render({
-          initial: () => html`waiting...`,
-          pending: () => html`Loading`,
-          complete: () => '',
-          error: e => html`error ${e}`,
-        })}
-        ${this._fetchHealthcareDataTask.render({
-          initial: () => html`waiting...`,
-          pending: () => html`Loading`,
-          complete: () => '',
-          error: e => html`error ${e}`,
-        })}
       </div>
     `;
   }
@@ -258,6 +263,9 @@ export class WholeCountryCharts extends LitElement {
         height: 100%;
         width: 100%;
       }
+      .chart-container {
+        position: relative;
+      }
       #year-selection {
         display: flex;
         align-content: center;
@@ -268,12 +276,6 @@ export class WholeCountryCharts extends LitElement {
         display: grid;
         grid-template-rows: 1fr 1fr;
       }
-      #country-infections {
-        height: 45vh;
-      }
-      #country-healthcare {
-        height: 45vh;
-      }
       sl-select {
         width: 8rem;
       }
@@ -282,6 +284,7 @@ export class WholeCountryCharts extends LitElement {
         margin-top: 1.3rem;
       }
     `,
+    commonStyles,
   ];
 }
 customElements.define('whole-country-charts', WholeCountryCharts);

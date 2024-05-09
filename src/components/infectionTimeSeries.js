@@ -6,6 +6,7 @@ import {
 } from '../dataService';
 
 import { Task } from '@lit/task';
+import { commonStyles } from './commonStyles';
 export class InfectionTimeSeries extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
@@ -172,8 +173,10 @@ export class InfectionTimeSeries extends LitElement {
       <div id="container">
         <div id="diseases-chart"></div>
         ${this._fetchInfectionDataTask.render({
-          initial: () => html`loading infection data`,
-          pending: () => html`loading infection data`,
+          initial: () =>
+            html`<div class="loader"><span>Loading...</span></div>`,
+          pending: () =>
+            html`<div class="loader"><span>Loading...</span></div>`,
           complete: () => ``,
           error: e => html`Error ${e}`,
         })}
@@ -253,14 +256,17 @@ export class InfectionTimeSeries extends LitElement {
     });
   }
 
-  static get styles() {
-    return css`
+  static styles = [
+    css`
       #container {
+        position: relative;
+        height: 100%;
       }
       #diseases-chart {
-        height: 45vh;
+        height: 100%;
       }
-    `;
-  }
+    `,
+    commonStyles,
+  ];
 }
 window.customElements.define('infection-time-series', InfectionTimeSeries);

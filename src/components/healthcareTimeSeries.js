@@ -11,6 +11,7 @@ import {
   getHealthcareDataForRegionByCategory,
 } from '../dataService';
 import { getMetricById, getMetricsByCategoryAndContext } from '../categories';
+import { commonStyles } from './commonStyles';
 
 export class HealthcareTimeSeries extends LitElement {
   static properties = {
@@ -37,30 +38,42 @@ export class HealthcareTimeSeries extends LitElement {
     this.selectedDaysMetric = null;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    this.updateSelectedMetrics();
+  }
+
+  updateSelectedMetrics() {
+    this.selectedVisitsMetric = getMetricsByCategoryAndContext(
+      'Visits',
+      this.healthcareContext
+    )
+      .reverse()
+      .pop();
+    this.selectedPatientsMetric = getMetricsByCategoryAndContext(
+      'Patients',
+      this.healthcareContext
+    )
+      .reverse()
+      .pop();
+    this.selectedDaysMetric = getMetricsByCategoryAndContext(
+      'Length of stay',
+      this.healthcareContext
+    )
+      .reverse()
+      .pop();
+  }
+
   willUpdate(changedProps) {
     let shouldFetchData = false;
     let shouldFetchAll = true;
     let fetchOnlyOne = null;
     let regionsToFetch = this.selectedRegions;
-    if (changedProps.has('healthcareContext')) {
-      this.selectedVisitsMetric = getMetricsByCategoryAndContext(
-        'Visits',
-        this.healthcareContext
-      )
-        .reverse()
-        .pop();
-      this.selectedPatientsMetric = getMetricsByCategoryAndContext(
-        'Patients',
-        this.healthcareContext
-      )
-        .reverse()
-        .pop();
-      this.selectedDaysMetric = getMetricsByCategoryAndContext(
-        'Length of stay',
-        this.healthcareContext
-      )
-        .reverse()
-        .pop();
+    if (
+      changedProps.has('healthcareContext') &&
+      this.selectedRegions.length > 1
+    ) {
+      this.updateSelectedMetrics();
     }
     if (changedProps.has('selectedVisitsMetric') && this.selectedVisitsMetric) {
       fetchOnlyOne = 'Visits';
@@ -224,12 +237,6 @@ export class HealthcareTimeSeries extends LitElement {
   render() {
     return html`
       <div id="container">
-        ${this._fetchHealthcareDataTask.render({
-          initial: () => html`Loading healthcare data`,
-          pending: () => html`Loading healthcare data`,
-          complete: () => ``,
-          error: e => html`Error ${e}`,
-        })}
         <sl-tab-group
           placement="top"
           @sl-tab-show=${e => this.handleSelectedCategory(e)}>
@@ -263,6 +270,13 @@ export class HealthcareTimeSeries extends LitElement {
             ${this.getSelectionRadio('Length of stay')}
             <div id="caredays-chart"></div> </sl-tab-panel
         ></sl-tab-group>
+        ${this._fetchHealthcareDataTask.render({
+          initial: () => html`Loading healthcare data`,
+          pending: () =>
+            html`<div class="loader"><span>Loading...</span></div>`,
+          complete: () => ``,
+          error: e => html`Error ${e}`,
+        })}
       </div>
     `;
   }
@@ -466,7 +480,8 @@ export class HealthcareTimeSeries extends LitElement {
   static styles = [
     css`
       #container {
-        height: 45vh;
+        position: relative;
+        height: 100%;
       }
       .selection-radio {
         width: 100%;
@@ -474,7 +489,13 @@ export class HealthcareTimeSeries extends LitElement {
         align-content: center;
         justify-content: center;
       }
+      #visits-chart,
+      #patients-chart,
+      #caredays-chart {
+        height: 43vh;
+      }
     `,
+    commonStyles,
   ];
 }
 customElements.define('healthcare-time-series', HealthcareTimeSeries);
