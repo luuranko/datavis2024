@@ -134,9 +134,15 @@ export class MyElement extends LitElement {
       #whole-country-data {
         width: 100%;
       }
+      selection-from-map {
+        height: 95vh;
+      }
       .credits {
         font-size: 0.7rem;
         max-width: 30rem;
+      }
+      #credits {
+        margin-top: -3rem;
       }
     `,
     commonStyles,
