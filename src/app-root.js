@@ -44,8 +44,8 @@ export class MyElement extends LitElement {
   render() {
     return html` <div id="page">
       ${this._setUpTask.render({
-        initial: () => html`<div class="loader"><span>Loading...</span></div>`,
-        pending: () => html`<div class="loader"><span>Loading...</span></div>`,
+        initial: () => html`<div class="overlay"><span>Loading...</span></div>`,
+        pending: () => html`<div class="overlay"><span>Loading...</span></div>`,
         complete: () => html`
           <selection-from-map
             @change-selected-regions=${e =>
@@ -72,7 +72,10 @@ export class MyElement extends LitElement {
             .currentHealthcareMetric=${this
               .currentHealthcareMetric}></whole-country-charts>
         `,
-        error: e => html`Error: ${e}`,
+        error: e =>
+          html`<div class="overlay">
+            <span class="error">Error ${e}</span>
+          </div>`,
       })}
       ${this.getCredits()}
     </div>`;

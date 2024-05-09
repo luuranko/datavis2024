@@ -1,7 +1,7 @@
 import { css } from 'lit';
 
 export const commonStyles = css`
-  .loader {
+  .overlay {
     position: absolute;
     top: 0;
     right: 0;
@@ -12,15 +12,18 @@ export const commonStyles = css`
     align-content: center;
     justify-content: center;
     padding-top: 10vh;
-  }
-  .loader > span {
-    font-size: 1.5rem;
     color: var(--sl-color-neutral-500);
+  }
+  .overlay > span {
+    font-size: 1.5rem;
     background-color: white;
     height: min-content;
     padding: 1rem;
     border: 1px grey dotted;
     border-radius: 5%;
+  }
+  .error {
+    color: var(--sl-color-danger-700);
   }
   .chart-section-height {
     height: 45vh;

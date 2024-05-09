@@ -83,18 +83,24 @@ export class WholeCountryCharts extends LitElement {
             <div id="country-infections" class="chart-section-height"></div>
             ${this._fetchInfectionDataTask.render({
               initial: () => html`waiting...`,
-              pending: () => html`<div class="loader"></div>`,
+              pending: () => html`<div class="overlay"></div>`,
               complete: () => '',
-              error: e => html`error ${e}`,
+              error: e =>
+                html`<div class="overlay">
+                  <span class="error">Error ${e}</span>
+                </div>`,
             })}
           </div>
           <div class="chart-container">
             <div id="country-healthcare" class="chart-section-height"></div>
             ${this._fetchHealthcareDataTask.render({
               initial: () => html`waiting...`,
-              pending: () => html`<div class="loader"></div>`,
+              pending: () => html`<div class="overlay"></div>`,
               complete: () => '',
-              error: e => html`error ${e}`,
+              error: e =>
+                html`<div class="overlay">
+                  <span class="error">Error ${e}</span>
+                </div>`,
             })}
           </div>
         </div>

@@ -174,11 +174,14 @@ export class InfectionTimeSeries extends LitElement {
         <div id="diseases-chart"></div>
         ${this._fetchInfectionDataTask.render({
           initial: () =>
-            html`<div class="loader"><span>Loading...</span></div>`,
+            html`<div class="overlay"><span>Loading...</span></div>`,
           pending: () =>
-            html`<div class="loader"><span>Loading...</span></div>`,
+            html`<div class="overlay"><span>Loading...</span></div>`,
           complete: () => ``,
-          error: e => html`Error ${e}`,
+          error: e =>
+            html`<div class="overlay">
+              <span class="error">Error ${e}</span>
+            </div>`,
         })}
       </div>
     `;

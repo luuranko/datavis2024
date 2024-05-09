@@ -271,11 +271,15 @@ export class HealthcareTimeSeries extends LitElement {
             <div id="caredays-chart"></div> </sl-tab-panel
         ></sl-tab-group>
         ${this._fetchHealthcareDataTask.render({
-          initial: () => html`Loading healthcare data`,
+          initial: () =>
+            html`<div class="overlay"><span>Loading...</span></div>`,
           pending: () =>
-            html`<div class="loader"><span>Loading...</span></div>`,
+            html`<div class="overlay"><span>Loading...</span></div>`,
           complete: () => ``,
-          error: e => html`Error ${e}`,
+          error: e =>
+            html`<div class="overlay">
+              <span class="error">Error ${e}</span>
+            </div>`,
         })}
       </div>
     `;
