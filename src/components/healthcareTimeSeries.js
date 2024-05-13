@@ -111,7 +111,12 @@ export class HealthcareTimeSeries extends LitElement {
         shouldFetchData = true;
       } else {
         shouldFetchData = true;
-        if (prevRegions && prevRegions.length < this.selectedRegions.length) {
+        if (
+          prevRegions &&
+          prevRegions.length < this.selectedRegions.length &&
+          this.selectedRegions.length > 0 &&
+          this.selectedRegions.length - prevRegions.length < 7
+        ) {
           shouldFetchAll = false;
           regionsToFetch = this.selectedRegions.filter(
             r => !prevRegions.includes(r)

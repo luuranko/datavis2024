@@ -3,11 +3,15 @@ import '@shoelace-style/shoelace/dist/components/select/select.js';
 import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/radio-group/radio-group.js';
 import '@shoelace-style/shoelace/dist/components/radio/radio.js';
-import '@shoelace-style/shoelace/dist/components/tooltip/tooltip.js';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
-import { diseasesByCategory, findDiseaseByIndex } from '../diseases';
+import {
+  diseasesByCategory,
+  findDiseaseByIndex,
+  getGroupedDiseases,
+} from '../diseases';
 import './infectionTimeSeries';
 import './healthcareTimeSeries';
+import './dropdown-multiselect';
 import { minYear, maxYear } from '../globals';
 import { getAllMetricsGroupedByContext, getMetricById } from '../categories';
 
@@ -127,6 +131,28 @@ export class ChartsSection extends LitElement {
     const diseases = categories.find(
       c => c.id === this.currentDiseaseCategory
     ).diseases;
+    return html`
+      <div id="diseases-selection">
+        <small>Select disease category</small>
+        <sl-select
+          style="width:20rem"
+          ?hoist=${true}
+          .value=${`${this.currentDiseaseCategory}`}
+          @sl-change=${e =>
+            (this.currentDiseaseCategory = parseInt(e.target.value))}>
+          ${categories.map(c => {
+            return html` <sl-option value=${`${c.id}`}>${c.name}</sl-option> `;
+          })}
+        </sl-select>
+        <small>Select diseases</small>
+        <dropdown-multiselect
+          .options=${diseases}
+          @select-diseases=${e =>
+            this.switchSelectedDiseases(e.detail.diseases)}>
+        </dropdown-multiselect>
+        ${this.getSelectCurrentDiseaseFilter()}
+      </div>
+    `;
     const options = diseases.map(d => {
       return html`<sl-option value=${`${d.index}`}
         >${d.displayName}</sl-option

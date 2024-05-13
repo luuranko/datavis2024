@@ -99,26 +99,26 @@ export const diseases = [
   },
   {
     index: 878175,
-    name: 'ESBL blood/liquor, E.coli',
-    displayName: 'ESBL blood/liquor, E.coli',
+    name: 'ESBL blood/liquor, E. coli',
+    displayName: 'ESBL blood/liquor, E. coli',
     category: 3,
   },
   {
     index: 877764,
-    name: 'ESBL blood/liquor, K.pneumoniae',
-    displayName: 'ESBL blood/liquor, K.pneumoniae',
+    name: 'ESBL blood/liquor, K. pneumoniae',
+    displayName: 'ESBL blood/liquor, K. pneumoniae',
     category: 1,
   },
   {
     index: 877792,
-    name: 'ESBL-carriership, E.coli',
-    displayName: 'ESBL-carriership, E.coli',
+    name: 'ESBL-carriership, E. coli',
+    displayName: 'ESBL-carriership, E. coli',
     category: 3,
   },
   {
     index: 878134,
-    name: 'ESBL-carriership, K.pneumoniae',
-    displayName: 'ESBL-carriership, K.pneumoniae',
+    name: 'ESBL-carriership, K. pneumoniae',
+    displayName: 'ESBL-carriership, K. pneumoniae',
     category: 1,
   },
   {
@@ -234,7 +234,12 @@ export const diseases = [
     displayName: 'Hepatitis E',
     category: 6,
   },
-  { index: 877719, name: 'Influenza', displayName: 'Influenza', category: 1 },
+  {
+    index: 877719,
+    name: 'Influenza',
+    displayName: 'Influenza, total',
+    category: 1,
+  },
   {
     index: 877942,
     name: 'Influenza A',
@@ -504,11 +509,110 @@ export const diseaseCategories = [
   { id: 6, name: 'Other' },
 ];
 
+export const diseaseGroups = [
+  {
+    id: 0,
+    displayName: 'E. coli',
+    totalId: null,
+    childIds: [877958, 878114, 878175, 877792],
+  },
+  {
+    id: 1,
+    displayName: 'K. pneumoniae',
+    totalId: null,
+    childIds: [878012, 877764, 878134],
+  },
+  {
+    id: 2,
+    displayName: 'HIV',
+    totalId: 877747,
+    childIds: [877747, 877976, 878325],
+  },
+  {
+    id: 3,
+    displayName: 'Haemophilus influenzae',
+    totalId: 877722,
+    childIds: [877722, 878268, 878031, 878163, 878348, 877794, 877696],
+  },
+  {
+    id: 4,
+    displayName: 'Hepatitis',
+    totalId: null,
+    childIds: [877759, 877928, 877829, 878235, 877949, 878035],
+  },
+  {
+    id: 5,
+    displayName: 'Meningococcus',
+    totalId: null,
+    childIds: [878192, 878194, 878021, 877964, 877691, 878185, 878327],
+  },
+  {
+    id: 6,
+    displayName: 'Salmonella',
+    totalId: null,
+    childIds: [878301, 878372, 877941],
+  },
+  {
+    id: 7,
+    displayName: 'Streptococcus',
+    totalId: null,
+    childIds: [878191, 877647, 878129],
+  },
+  {
+    id: 8,
+    displayName: 'Tuberculosis',
+    totalId: 878093,
+    childIds: [878093, 877858, 877744],
+  },
+  {
+    id: 9,
+    displayName: 'Yersinia',
+    totalId: 877725,
+    childIds: [877725, 877807, 877771, 878362],
+  },
+  {
+    id: 10,
+    displayName: 'Influenza',
+    totalId: 877719,
+    childIds: [877719, 877942, 877733],
+  },
+];
+
+export const getGroupedDiseases = () => {
+  const grouped = [...diseaseGroups];
+  grouped.forEach(g => {
+    g.children = g.childIds.map(id => findDiseaseByIndex(id));
+    if (g.children.every(d => d.category === g.children[0].category)) {
+      g.category = g.children[0].category;
+    } else {
+      g.category = null;
+    }
+  });
+  const alreadyAdded = grouped.map(g => g.childIds).flat();
+  diseases.forEach(d => {
+    if (!alreadyAdded.includes(d.index)) {
+      grouped.push(d);
+    }
+  });
+  grouped.sort((a, b) =>
+    a.displayName > b.displayName ? 1 : b.displayName > a.displayName ? -1 : 0
+  );
+  return grouped;
+};
+
 export const diseasesByCategory = () => {
+  const diseaseList = getGroupedDiseases();
   const categories = [{ id: 7, name: 'All diseases' }, ...diseaseCategories];
   categories.forEach(c => {
-    c.diseases = diseases.filter(d => d.category === c.id);
+    c.diseases = diseaseList
+      .filter(d => d.category === c.id)
+      .concat(
+        diseaseList
+          .filter(g => g.category === null)
+          .map(g => g.children)
+          .filter(d => d.category === c.id)
+      );
   });
-  categories[0].diseases = diseases;
+  categories[0].diseases = diseaseList;
   return categories;
 };

@@ -4,6 +4,8 @@ import {
   getFinlandTopology,
   wellbeingToStateMap,
 } from '../dataService';
+import '@shoelace-style/shoelace/dist/components/button/button.js';
+import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 import Highcharts from 'highcharts/highmaps';
 
 export class SelectionFromMap extends LitElement {
@@ -40,9 +42,44 @@ export class SelectionFromMap extends LitElement {
   render() {
     return html`
       <div id="selection-map">
-        <div id="map-container" @click=${this.handleMapClick}></div>
+        <div id="map-container" @click=${this.setSelection}></div>
+        ${this.getButtons()}
       </div>
     `;
+  }
+
+  getButtons() {
+    const clearButton = html``;
+    return html`
+      <div id="buttons">
+        <sl-button
+          variant="text"
+          size="small"
+          @click=${() => this.selectAllRegions()}>
+          <sl-icon slot="prefix" name="check-all"></sl-icon>
+          Select all
+        </sl-button>
+        <sl-button
+          size="small"
+          variant="text"
+          class="clear"
+          ?disabled=${this.selectedRegions.length === 0}
+          @click=${() => this.clearRegionSelection()}>
+          <sl-icon slot="prefix" name="x"></sl-icon>
+          Clear selection
+        </sl-button>
+      </div>
+    `;
+  }
+
+  selectAllRegions() {
+    this.chart.series[0].data.forEach(point => point.select(true, true));
+    this.setSelection();
+  }
+
+  clearRegionSelection() {
+    this.chart.series[0].data.forEach(point => point.select(false, true));
+    this.setSelection();
   }
 
   firstUpdated() {
@@ -93,7 +130,7 @@ export class SelectionFromMap extends LitElement {
     });
   }
 
-  handleMapClick() {
+  setSelection() {
     const selected = this.chart
       .getSelectedPoints()
       .map(
@@ -115,9 +152,32 @@ export class SelectionFromMap extends LitElement {
       #selection-map {
         height: 100%;
         width: 100%;
+        position: relative;
       }
       #map-container {
         height: 90vh;
+      }
+      #buttons {
+        position: absolute;
+        top: 0;
+        right: 0;
+        margin-top: 5vh;
+        display: flex;
+        gap: 1rem;
+        flex-direction: column;
+        align-items: end;
+      }
+      sl-button.clear::part(base) {
+        color: var(--sl-color-danger-600);
+      }
+      sl-button.clear::part(base):hover {
+        color: var(--sl-color-danger-400);
+      }
+      sl-button[disabled].clear::part(base):hover {
+        color: var(--sl-color-danger-600);
+      }
+      sl-button.clear::part(base):active {
+        color: var(--sl-color-danger-700);
       }
     `,
   ];
