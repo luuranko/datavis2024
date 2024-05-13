@@ -4,14 +4,9 @@ import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/radio-group/radio-group.js';
 import '@shoelace-style/shoelace/dist/components/radio/radio.js';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
-import {
-  diseasesByCategory,
-  findDiseaseByIndex,
-  getGroupedDiseases,
-} from '../diseases';
 import './infectionTimeSeries';
 import './healthcareTimeSeries';
-import './dropdown-multiselect';
+import './disease-filters';
 import { minYear, maxYear } from '../globals';
 import { getAllMetricsGroupedByContext, getMetricById } from '../categories';
 
@@ -25,7 +20,6 @@ export class ChartsSection extends LitElement {
     healthcareContext: { type: String },
     startYear: { type: Number },
     endYear: { type: Number },
-    currentDiseaseCategory: { type: String },
   };
 
   constructor() {
@@ -38,8 +32,6 @@ export class ChartsSection extends LitElement {
     this.currentHealthcareMetric = null;
     this.startYear = minYear;
     this.endYear = maxYear;
-    this.currentDiseaseCategory = 7; // All diseases
-    this.selectedDiseasesByCategory = {};
   }
 
   render() {
@@ -60,7 +52,7 @@ export class ChartsSection extends LitElement {
               .endYear=${this.endYear}></infection-time-series>
           </div>
           <div class="filter-container has-section-divider">
-            ${this.getDiseaseFilters()}
+            <disease-filters></disease-filters>
           </div>
           <div id="healthcare">
             <healthcare-time-series
@@ -126,89 +118,6 @@ export class ChartsSection extends LitElement {
     this.dispatchEvent(new CustomEvent('change-end-year', options));
   };
 
-  getDiseaseFilters() {
-    const categories = diseasesByCategory();
-    const diseases = categories.find(
-      c => c.id === this.currentDiseaseCategory
-    ).diseases;
-    return html`
-      <div id="diseases-selection">
-        <small>Select disease category</small>
-        <sl-select
-          style="width:20rem"
-          ?hoist=${true}
-          .value=${`${this.currentDiseaseCategory}`}
-          @sl-change=${e =>
-            (this.currentDiseaseCategory = parseInt(e.target.value))}>
-          ${categories.map(c => {
-            return html` <sl-option value=${`${c.id}`}>${c.name}</sl-option> `;
-          })}
-        </sl-select>
-        <small>Select diseases</small>
-        <dropdown-multiselect
-          .options=${diseases}
-          @select-diseases=${e =>
-            this.switchSelectedDiseases(e.detail.diseases)}>
-        </dropdown-multiselect>
-        ${this.getSelectCurrentDiseaseFilter()}
-      </div>
-    `;
-    const options = diseases.map(d => {
-      return html`<sl-option value=${`${d.index}`}
-        >${d.displayName}</sl-option
-      >`;
-    });
-    const selectedValue = this.selectedDiseases.map(d => `${d.index}`);
-    return html`
-      <div id="diseases-selection">
-        <sl-select
-          label="Select disease category"
-          ?hoist=${true}
-          .value=${`${this.currentDiseaseCategory}`}
-          @sl-change=${e =>
-            (this.currentDiseaseCategory = parseInt(e.target.value))}>
-          ${categories.map(c => {
-            return html` <sl-option value=${`${c.id}`}>${c.name}</sl-option> `;
-          })}
-        </sl-select>
-        <sl-select
-          label="Select diseases"
-          id="disease-selector"
-          ?hoist=${true}
-          ?multiple=${true}
-          .value=${selectedValue}
-          @sl-change=${e => this.switchSelectedDiseases(e.target.value)}>
-          ${options}
-        </sl-select>
-        <sl-button
-          id="clear-selection-btn"
-          variant="text"
-          size="small"
-          class=${this.selectedDiseases.length > 0 ? '' : 'hidden'}
-          @click=${() => this.clearSelectedDiseases()}
-          >Clear selection</sl-button
-        >
-        ${this.getSelectCurrentDiseaseFilter()}
-      </div>
-    `;
-  }
-
-  getSelectCurrentDiseaseFilter() {
-    if (this.selectedDiseases.length < 2 || !this.currentDisease) return '';
-    const selectedOptions = this.selectedDiseases.map(d => {
-      return html`<sl-radio value=${`${d.index}`}>${d.displayName}</sl-radio>`;
-    });
-    return html`
-      <sl-radio-group
-        label="Compare regions by"
-        name="Select current disease"
-        value=${`${this.currentDisease.index}`}
-        @sl-change=${e => this.switchCurrentDisease(e)}>
-        ${selectedOptions}
-      </sl-radio-group>
-    `;
-  }
-
   getHealthcareFilters() {
     const metricsByContext = getAllMetricsGroupedByContext();
     const contexts = Object.keys(metricsByContext);
@@ -227,6 +136,18 @@ export class ChartsSection extends LitElement {
             `;
           })}
         </sl-select>
+        <!-- <sl-radio-group
+          label="Compare regions by"
+          name="Select healthcare metric"
+          value=${this.currentHealthcareMetric?.context ===
+        this.healthcareContext
+          ? this.currentHealthcareMetric?.id
+          : null}
+          @sl-change=${e => this.switchCurrentHealthcareMetric(e)}>
+          ${metricsByContext[this.healthcareContext].map(m => {
+          return html` <sl-radio value=${m.id}>${m.name}</sl-radio> `;
+        })}
+        </sl-radio-group> -->
         <sl-select
           label="Compare regions by"
           value=${this.currentHealthcareMetric?.context ===
@@ -244,16 +165,6 @@ export class ChartsSection extends LitElement {
     `;
   }
 
-  switchCurrentDisease(e) {
-    this.currentDisease = findDiseaseByIndex(parseInt(e.target.value));
-    const options = {
-      bubbles: true,
-      composed: true,
-      detail: { currentDisease: this.currentDisease },
-    };
-    this.dispatchEvent(new CustomEvent('change-current-disease', options));
-  }
-
   switchCurrentHealthcareMetric(e) {
     this.currentHealthcareMetric = getMetricById(parseInt(e.target.value));
     const options = {
@@ -262,35 +173,6 @@ export class ChartsSection extends LitElement {
       detail: { healthcareMetric: this.currentHealthcareMetric },
     };
     this.dispatchEvent(new CustomEvent('change-healthcare-metric', options));
-  }
-
-  clearSelectedDiseases() {
-    this.renderRoot.querySelector('#disease-selector').value = [];
-    this.switchSelectedDiseases([]);
-  }
-
-  switchSelectedDiseases(diseases) {
-    const newDiseases = diseases.map(ind => findDiseaseByIndex(parseInt(ind)));
-    this.selectedDiseases = newDiseases;
-    if (this.selectedDiseases.length > 0) {
-      if (
-        !this.currentDisease ||
-        !this.selectedDiseases.includes(this.currentDisease)
-      ) {
-        this.currentDisease = this.selectedDiseases[0];
-      }
-    } else {
-      this.currentDisease = null;
-    }
-    const options = {
-      bubbles: true,
-      composed: true,
-      detail: {
-        diseases: this.selectedDiseases,
-        currentDisease: this.currentDisease,
-      },
-    };
-    this.dispatchEvent(new CustomEvent('change-selected-diseases', options));
   }
 
   static get styles() {
@@ -316,17 +198,12 @@ export class ChartsSection extends LitElement {
         min-width: min-content;
         max-width: 30rem;
       }
-      #diseases-selection,
       #healthcare-filters {
         padding: 0.5rem;
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
         height: 100%;
-      }
-      #clear-selection-btn {
-        margin-right: 0;
-        margin-left: auto;
       }
       .hidden {
         display: none;

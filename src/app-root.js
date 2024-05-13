@@ -13,7 +13,7 @@ import { commonStyles } from './components/commonStyles';
 export class MyElement extends LitElement {
   static properties = {
     selectedDiseases: { type: Array },
-    currentDisease: { type: String },
+    currentDisease: { type: Object },
     currentHealthcareMetric: { type: Object },
     selectedRegions: { type: Array },
     startYear: { type: Number },
@@ -52,6 +52,7 @@ export class MyElement extends LitElement {
               (this.selectedRegions = e.detail.regions)}></selection-from-map>
           <charts-section
             .selectedRegions=${this.selectedRegions}
+            .currentDisease=${this.currentDisease}
             .selectedDiseases=${this.selectedDiseases}
             .startYear=${this.startYear}
             .endYear=${this.endYear}
