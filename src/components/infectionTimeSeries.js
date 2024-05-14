@@ -6,7 +6,7 @@ import {
 } from '../dataService';
 
 import { Task } from '@lit/task';
-import { errorView, loadingView } from './commonStyles';
+import { commonStyles, errorView, loadingView } from './commonStyles';
 export class InfectionTimeSeries extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
@@ -248,6 +248,7 @@ export class InfectionTimeSeries extends LitElement {
         height: 100%;
       }
     `,
+    commonStyles,
   ];
 }
 window.customElements.define('infection-time-series', InfectionTimeSeries);

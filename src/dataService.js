@@ -1,6 +1,5 @@
 import { minYear, maxYear } from './globals';
 import { healthcareCategories } from './categories';
-import { diseases } from './diseases';
 
 export const wellbeingToStateMap = {
   Uusimaa: 'Uusimaa',
@@ -26,6 +25,32 @@ export const wellbeingToStateMap = {
   Satakunta: 'Satakunta',
   'Vantaa and Kerava': 'Uusimaa',
   'Southwest Finland': 'Finland Proper',
+};
+
+const regionColors = {
+  Uusimaa: 'hsl(43.3 96.4% 56.3%)', // amber-400
+  'South Karelia': 'hsl(328.6 85.5% 70.2%)', // pink-400
+  'South Ostrobothnia': 'hsl(83.7 80.5% 44.3%)', // lime-500
+  'South Savo': 'hsl(24.6 95% 53.1%)', // orange-500
+  'City of Helsinki': 'hsl(43.3 96.4% 56.3%)',
+  'East Uusimaa': 'hsl(43.3 96.4% 56.3%)',
+  Kainuu: 'hsl(200.4 98% 39.4%)', // sky-600
+  'Kanta-Häme': 'hsl(50.4 97.8% 63.5%)', // yellow-300
+  'Central Ostrobothnia': 'hsl(217.2 91.2% 59.8%)', // blue-500
+  'Central Finland': 'hsl(161.4 93.5% 30.4%)', // emerald-600
+  'Central Uusimaa': 'hsl(43.3 96.4% 56.3%)',
+  Kymenlaakso: 'hsl(187.9 85.7% 53.3%)', // cyan-400
+  Lapland: 'hsl(240 3.8% 46.1%)', // gray-500
+  'West Uusimaa': 'hsl(43.3 96.4% 56.3%)',
+  Pirkanmaa: 'hsl(0 84.2% 60.2%)', // red-500
+  Ostrobothnia: 'hsl(292.2 84.1% 60.6%)', // fuchsia-500
+  'North Karelia': 'hsl(173.4 80.4% 40%)', //teal-500
+  'North Ostrobothnia': 'hsl(255.1 91.7% 76.3%)', //violet-400
+  'North Savo': 'hsl(345.3 82.7% 40.8%)', // rose-700
+  'Päijät-Häme': 'hsl(271.5 81.3% 55.9%)', // purple-600
+  Satakunta: 'hsl(244.5 57.9% 50.6%)', // indigo-700
+  'Vantaa and Kerava': 'hsl(43.3 96.4% 56.3%)',
+  'Southwest Finland': 'hsl(142.1 70.6% 45.3%)', // green-500
 };
 
 let yearIndices = null;
@@ -132,15 +157,12 @@ const getSotkanetCountyIndices = async () => {
 };
 
 export const setUpIndices = async () => {
-  const start = new Date();
   if (!finlandTopology) await setUpFinlandTopology();
   if (!uusimaaData) await getUusimaaData();
   if (!yearIndices) yearIndices = await getYearIndices();
   if (!regionIndices) regionIndices = await getRegionIndices();
   if (!sotkanetCountyIndices)
     sotkanetCountyIndices = await getSotkanetCountyIndices();
-  const end = new Date();
-  const time = end - start;
 };
 
 const setUpFinlandTopology = async () => {
@@ -165,8 +187,7 @@ export const getEmptyMapData = () => {
   const hcKeys = finlandTopology.objects.default.geometries.map(
     entry => entry.properties['hc-key']
   );
-  const data = hcKeys.map(key => [key, 0]);
-  return data;
+  return hcKeys.map(key => [key, 0]);
 };
 
 const getHcKey = wellbeingCountyName => {
@@ -190,18 +211,12 @@ const getYearFilter = (startYear, endYear = null) => {
 
 const getDiseaseFilter = diseases => {
   if (!Array.isArray(diseases)) return `${diseases.index}.`;
-  return diseases.length === 1
-    ? `${diseases.index}.`
-    : diseases.map(d => d.index).join('.');
+  return diseases.map(d => d.index).join('.');
 };
 
 const getRegionFilter = regions => {
-  if (!Array.isArray(regions)) {
-    return `${regionIndices[regions]}.`;
-  }
-  return regions.length === 1
-    ? `${regionIndices[regions[0]]}.`
-    : regions.map(r => regionIndices[r]).join('.');
+  if (!Array.isArray(regions)) return `${regionIndices[regions]}.`;
+  return regions.map(r => regionIndices[r]).join('.');
 };
 
 export const getInfectionIncidenceManyDiseases = async (
@@ -215,10 +230,9 @@ export const getInfectionIncidenceManyDiseases = async (
       getInfectionIncidenceForOne(d, region, startYear, endYear)
     )
   );
-  const series = diseases.map((d, index) => {
+  return diseases.map((d, index) => {
     return { name: d.displayName, data: dataSet[index], id: d.index };
   });
-  return series;
 };
 
 export const getInfectionIncidenceManyRegions = async (
@@ -232,10 +246,9 @@ export const getInfectionIncidenceManyRegions = async (
       getInfectionIncidenceForOne(disease, r, startYear, endYear)
     )
   );
-  const series = regions.map((r, index) => {
-    return { name: r, data: dataSet[index], id: r };
+  return regions.map((r, index) => {
+    return { name: r, data: dataSet[index], id: r, color: regionColors[r] };
   });
-  return series;
 };
 
 export const getInfectionIncidenceForOne = async (
@@ -270,7 +283,6 @@ export const getInfectionIncidenceForOne = async (
 };
 
 const getUusimaaInfectionIncidence = async (disease, startYear, endYear) => {
-  const d = [];
   const years = Array.from(
     { length: endYear - startYear + 1 },
     (_i, y) => y + startYear
@@ -278,10 +290,9 @@ const getUusimaaInfectionIncidence = async (disease, startYear, endYear) => {
   const dataSet = await Promise.all(
     years.map(year => getUusimaaIncidenceForOneYear(disease, year))
   );
-  dataSet.forEach((data, index) => {
-    if (data !== null) d.push([index + startYear, data]);
+  return dataSet.map((data, index) => {
+    if (data !== null) return [index + startYear, data];
   });
-  return d;
 };
 
 export const getInfectionDataForWholeCountryOneYear = async (disease, year) => {
@@ -326,7 +337,7 @@ const getUusimaaIncidenceForOneYear = async (disease, year) => {
     (accum, curr) => accum + parseInt(curr),
     0
   );
-  // calculate ratio
+  // calculate ratio for 100 000 pop
   const ratio = (cases * 100000) / uusimaaData.population[year];
   return parseFloat(ratio.toFixed(1));
 };
@@ -349,7 +360,6 @@ export const getHealthcareDataForManyRegions = async (
   endYear
 ) => {
   if (!ind) return [];
-  const series = [];
   const regionIndices = regions.map(region => sotkanetCountyIndices[region]);
   const years = getSotkanetYearsFilterString(startYear, endYear);
   const url = `https://sotkanet.fi/rest/1.1/json?indicator=${ind}${years}&genders=total`;
@@ -358,13 +368,17 @@ export const getHealthcareDataForManyRegions = async (
   const values = data
     .filter(entry => regionIndices.includes(entry.region))
     .toSorted((a, b) => a.year - b.year);
-  regions.forEach(region => {
+  return regions.map(region => {
     const data = values
       .filter(val => val.region === sotkanetCountyIndices[region])
       .map(val => [val.year, val.value]);
-    series.push({ name: region, id: region, data: data });
+    return {
+      name: region,
+      id: region,
+      data: data,
+      color: regionColors[region],
+    };
   });
-  return series;
 };
 
 export const getHealthcareDataForRegionByCategory = async (
@@ -396,7 +410,7 @@ export const getHealthcareDataWholeCountry = async (ind, year) => {
   const url = `https://sotkanet.fi/rest/1.1/json?indicator=${ind}${years}&genders=total`;
   const res = await fetch(url);
   const data = await res.json();
-  const values = data
+  return data
     .filter(entry => regionIndices.includes(entry.region))
     .map(entry => [
       getHcKey(
@@ -406,5 +420,4 @@ export const getHealthcareDataWholeCountry = async (ind, year) => {
       ),
       entry.value,
     ]);
-  return values;
 };

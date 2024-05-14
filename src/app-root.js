@@ -8,7 +8,11 @@ import '@shoelace-style/shoelace/dist/components/popup/popup.js';
 import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 import { maxYear, minYear } from './globals';
-import { errorView, loadingView } from './components/commonStyles';
+import {
+  commonStyles,
+  errorView,
+  loadingView,
+} from './components/commonStyles';
 
 export class MyElement extends LitElement {
   static properties = {
@@ -143,6 +147,7 @@ export class MyElement extends LitElement {
         margin-top: -3rem;
       }
     `,
+    commonStyles,
   ];
 }
 

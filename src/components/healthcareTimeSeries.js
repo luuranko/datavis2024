@@ -11,7 +11,7 @@ import {
   getHealthcareDataForRegionByCategory,
 } from '../dataService';
 import { getMetricById, getMetricsByCategoryAndContext } from '../categories';
-import { errorView, loadingView } from './commonStyles';
+import { commonStyles, errorView, loadingView } from './commonStyles';
 
 export class HealthcareTimeSeries extends LitElement {
   static properties = {
@@ -112,7 +112,6 @@ export class HealthcareTimeSeries extends LitElement {
         const removableRegions = prevRegions.filter(
           r => !this.selectedRegions.includes(r)
         );
-        console.log(removableRegions, this.healthCareData);
         this.healthCareData.visits = this.healthCareData.visits.filter(
           s => !removableRegions.includes(s.id)
         );
@@ -503,6 +502,7 @@ export class HealthcareTimeSeries extends LitElement {
         height: 43vh;
       }
     `,
+    commonStyles,
   ];
 }
 customElements.define('healthcare-time-series', HealthcareTimeSeries);
