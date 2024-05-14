@@ -12,7 +12,7 @@ import '@shoelace-style/shoelace/dist/components/option/option.js';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import { minYear, maxYear } from '../globals';
 import { getCategoryOfMetricById } from '../categories';
-import { commonStyles } from './commonStyles';
+import { commonStyles, errorView, loadingView } from './commonStyles';
 
 export class WholeCountryCharts extends LitElement {
   static get properties() {
@@ -82,25 +82,19 @@ export class WholeCountryCharts extends LitElement {
           <div class="chart-container">
             <div id="country-infections" class="chart-section-height"></div>
             ${this._fetchInfectionDataTask.render({
-              initial: () => html`waiting...`,
-              pending: () => html`<div class="overlay"></div>`,
+              initial: () => loadingView,
+              pending: () => loadingView,
               complete: () => '',
-              error: e =>
-                html`<div class="overlay">
-                  <span class="error">Error ${e}</span>
-                </div>`,
+              error: e => errorView(e),
             })}
           </div>
           <div class="chart-container">
             <div id="country-healthcare" class="chart-section-height"></div>
             ${this._fetchHealthcareDataTask.render({
-              initial: () => html`waiting...`,
-              pending: () => html`<div class="overlay"></div>`,
+              initial: () => loadingView,
+              pending: () => loadingView,
               complete: () => '',
-              error: e =>
-                html`<div class="overlay">
-                  <span class="error">Error ${e}</span>
-                </div>`,
+              error: e => errorView(e),
             })}
           </div>
         </div>

@@ -8,7 +8,7 @@ import '@shoelace-style/shoelace/dist/components/popup/popup.js';
 import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 import { maxYear, minYear } from './globals';
-import { commonStyles } from './components/commonStyles';
+import { errorView, loadingView } from './components/commonStyles';
 
 export class MyElement extends LitElement {
   static properties = {
@@ -44,8 +44,8 @@ export class MyElement extends LitElement {
   render() {
     return html` <div id="page">
       ${this._setUpTask.render({
-        initial: () => html`<div class="overlay"><span>Loading...</span></div>`,
-        pending: () => html`<div class="overlay"><span>Loading...</span></div>`,
+        initial: () => loadingView,
+        pending: () => loadingView,
         complete: () => html`
           <selection-from-map
             @change-selected-regions=${e =>
@@ -73,10 +73,7 @@ export class MyElement extends LitElement {
             .currentHealthcareMetric=${this
               .currentHealthcareMetric}></whole-country-charts>
         `,
-        error: e =>
-          html`<div class="overlay">
-            <span class="error">Error ${e}</span>
-          </div>`,
+        error: e => errorView(e),
       })}
       ${this.getCredits()}
     </div>`;
@@ -146,7 +143,6 @@ export class MyElement extends LitElement {
         margin-top: -3rem;
       }
     `,
-    commonStyles,
   ];
 }
 

@@ -11,7 +11,7 @@ import {
   getHealthcareDataForRegionByCategory,
 } from '../dataService';
 import { getMetricById, getMetricsByCategoryAndContext } from '../categories';
-import { commonStyles } from './commonStyles';
+import { commonStyles, errorView, loadingView } from './commonStyles';
 
 export class HealthcareTimeSeries extends LitElement {
   static properties = {
@@ -276,15 +276,10 @@ export class HealthcareTimeSeries extends LitElement {
             <div id="caredays-chart"></div> </sl-tab-panel
         ></sl-tab-group>
         ${this._fetchHealthcareDataTask.render({
-          initial: () =>
-            html`<div class="overlay"><span>Loading...</span></div>`,
-          pending: () =>
-            html`<div class="overlay"><span>Loading...</span></div>`,
+          initial: () => loadingView,
+          pending: () => loadingView,
           complete: () => ``,
-          error: e =>
-            html`<div class="overlay">
-              <span class="error">Error ${e}</span>
-            </div>`,
+          error: e => errorView(e),
         })}
       </div>
     `;

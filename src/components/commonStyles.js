@@ -1,4 +1,17 @@
-import { css } from 'lit';
+import { html, css } from 'lit';
+import '@shoelace-style/shoelace/dist/components/spinner/spinner.js';
+
+export const loadingView = html`
+  <div class="overlay">
+    <sl-spinner></sl-spinner>
+  </div>
+`;
+
+export const errorView = error => html`
+  <div class="overlay">
+    <span class="error">Error ${error}</span>
+  </div>
+`;
 
 export const commonStyles = css`
   .overlay {
@@ -11,7 +24,7 @@ export const commonStyles = css`
     display: flex;
     align-content: center;
     justify-content: center;
-    padding-top: 10vh;
+    padding-top: 15vh;
     color: var(--sl-color-neutral-500);
   }
   .overlay > span {
@@ -21,6 +34,9 @@ export const commonStyles = css`
     padding: 1rem;
     border: 1px grey dotted;
     border-radius: 5%;
+  }
+  sl-spinner {
+    font-size: 5rem;
   }
   .error {
     color: var(--sl-color-danger-700);

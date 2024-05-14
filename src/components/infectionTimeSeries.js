@@ -6,7 +6,7 @@ import {
 } from '../dataService';
 
 import { Task } from '@lit/task';
-import { commonStyles } from './commonStyles';
+import { commonStyles, errorView, loadingView } from './commonStyles';
 export class InfectionTimeSeries extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
@@ -173,15 +173,10 @@ export class InfectionTimeSeries extends LitElement {
       <div id="container">
         <div id="diseases-chart"></div>
         ${this._fetchInfectionDataTask.render({
-          initial: () =>
-            html`<div class="overlay"><span>Loading...</span></div>`,
-          pending: () =>
-            html`<div class="overlay"><span>Loading...</span></div>`,
+          initial: () => loadingView,
+          pending: () => loadingView,
           complete: () => ``,
-          error: e =>
-            html`<div class="overlay">
-              <span class="error">Error ${e}</span>
-            </div>`,
+          error: e => errorView(e),
         })}
       </div>
     `;
