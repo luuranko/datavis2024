@@ -288,9 +288,11 @@ const getUusimaaInfectionIncidence = async (disease, startYear, endYear) => {
   const dataSet = await Promise.all(
     years.map(year => getUusimaaIncidenceForOneYear(disease, year))
   );
-  return dataSet.map((data, index) => {
-    if (data !== null) return [index + startYear, data];
-  });
+  return dataSet
+    .map((data, index) => {
+      if (data !== null) return [index + startYear, data];
+    })
+    .filter(d => d);
 };
 
 export const getInfectionDataForWholeCountryOneYear = async (disease, year) => {
@@ -325,6 +327,7 @@ const getUusimaaIncidenceForOneYear = async (disease, year) => {
   // cases
   const url = `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=nidrreportgroup-${diseaseFilter}&row=wscmunicipality2022-878189.878228.877978.877844.877893.&column=yearmonth-${yearFilter}.&filter=measure-877837&fo=1#`;
   const res1 = await fetch(url);
+  if (!res1.ok) return null;
   const caseData = await res1.json();
   if (!caseData.dataset.dimension.yearmonth) {
     return null;
