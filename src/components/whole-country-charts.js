@@ -108,10 +108,10 @@ export class WholeCountryCharts extends LitElement {
   }
 
   getYearSelection() {
-    const years = [];
-    for (let i = minYear; i <= maxYear; i++) {
-      years.push(html` <sl-option value=${i}>${i}</sl-option> `);
-    }
+    const years = Array.from(
+      { length: maxYear - minYear + 1 },
+      (_i, y) => y + minYear
+    ).map(y => html` <sl-option value=${y}>${y}</sl-option> `);
     return html`
       <div id="year-selection">
         <sl-icon-button

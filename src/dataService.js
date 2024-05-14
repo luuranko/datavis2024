@@ -35,11 +35,12 @@ let finlandTopology = null;
 let uusimaaData = null;
 
 const getSotkanetYearsFilterString = (startYear, endYear) => {
-  const years = [];
-  for (let year = startYear; year <= endYear; year++) {
-    years.push(`&years=${year}`);
-  }
-  return years.join('');
+  return Array.from(
+    { length: endYear - startYear + 1 },
+    (_i, y) => y + startYear
+  )
+    .map(y => `&years=${y}`)
+    .join('');
 };
 
 const getUusimaaData = async () => {
@@ -179,11 +180,12 @@ const getYearFilter = (startYear, endYear = null) => {
   if (startYear === endYear || !endYear) {
     return `${yearIndices[startYear]}.`;
   }
-  const arr = [];
-  for (let i = startYear; i <= endYear; i++) {
-    arr.push(yearIndices[i]);
-  }
-  return arr.join('.');
+  return Array.from(
+    { length: endYear - startYear + 1 },
+    (_i, y) => y + startYear
+  )
+    .map(y => yearIndices[y])
+    .join('.');
 };
 
 const getDiseaseFilter = diseases => {
@@ -208,20 +210,14 @@ export const getInfectionIncidenceManyDiseases = async (
   startYear,
   endYear
 ) => {
-  const series = [];
-  for (let i = 0; i < diseases.length; i++) {
-    const data = await getInfectionIncidenceForOne(
-      diseases[i],
-      region,
-      startYear,
-      endYear
-    );
-    series.push({
-      name: diseases[i].displayName,
-      data: data,
-      id: diseases[i].index,
-    });
-  }
+  const dataSet = await Promise.all(
+    diseases.map(d =>
+      getInfectionIncidenceForOne(d, region, startYear, endYear)
+    )
+  );
+  const series = diseases.map((d, index) => {
+    return { name: d.displayName, data: dataSet[index], id: d.index };
+  });
   return series;
 };
 
@@ -231,16 +227,14 @@ export const getInfectionIncidenceManyRegions = async (
   startYear,
   endYear
 ) => {
-  const series = [];
-  for (let i = 0; i < regions.length; i++) {
-    const data = await getInfectionIncidenceForOne(
-      disease,
-      regions[i],
-      startYear,
-      endYear
-    );
-    series.push({ name: regions[i], data: data, id: regions[i] });
-  }
+  const dataSet = await Promise.all(
+    regions.map(r =>
+      getInfectionIncidenceForOne(disease, r, startYear, endYear)
+    )
+  );
+  const series = regions.map((r, index) => {
+    return { name: r, data: dataSet[index], id: r };
+  });
   return series;
 };
 
@@ -272,19 +266,21 @@ export const getInfectionIncidenceForOne = async (
     .map(y => parseInt(y.split('Year ')[1]))
     .toSorted();
   const values = Object.values(data.dataset.value).map(val => parseFloat(val));
-  const d = [];
-  for (let i = 0; i < years.length; i++) {
-    d.push([years[i], values[i]]);
-  }
-  return d;
+  return Array.from({ length: years.length }, (_i, i) => [years[i], values[i]]);
 };
 
 const getUusimaaInfectionIncidence = async (disease, startYear, endYear) => {
   const d = [];
-  for (let year = startYear; year <= endYear; year++) {
-    const value = await getUusimaaIncidenceForOneYear(disease, year);
-    if (value !== null) d.push([year, value]);
-  }
+  const years = Array.from(
+    { length: endYear - startYear + 1 },
+    (_i, y) => y + startYear
+  );
+  const dataSet = await Promise.all(
+    years.map(year => getUusimaaIncidenceForOneYear(disease, year))
+  );
+  dataSet.forEach((data, index) => {
+    if (data !== null) d.push([index + startYear, data]);
+  });
   return d;
 };
 
@@ -335,15 +331,15 @@ const getUusimaaIncidenceForOneYear = async (disease, year) => {
   return parseFloat(ratio.toFixed(1));
 };
 
-const getSotkanetDataForOneRegion = async (ind, regionIndex, yearFilter) => {
-  const url = `https://sotkanet.fi/rest/1.1/json?indicator=${ind}${yearFilter}&genders=total`;
+const getSotkanetDataForOneRegion = async (metric, regionIndex, yearFilter) => {
+  const url = `https://sotkanet.fi/rest/1.1/json?indicator=${metric.id}${yearFilter}&genders=total`;
   const res = await fetch(url);
   const data = await res.json();
   const values = data
     .filter(entry => entry.region === regionIndex)
     .toSorted((a, b) => a.year - b.year)
     .map(entry => [entry.year, entry.value]);
-  return values;
+  return { name: metric.name, data: values };
 };
 
 export const getHealthcareDataForManyRegions = async (
@@ -352,6 +348,7 @@ export const getHealthcareDataForManyRegions = async (
   startYear,
   endYear
 ) => {
+  if (!ind) return [];
   const series = [];
   const regionIndices = regions.map(region => sotkanetCountyIndices[region]);
   const years = getSotkanetYearsFilterString(startYear, endYear);
@@ -376,16 +373,14 @@ export const getHealthcareDataForRegionByCategory = async (
   startYear,
   endYear
 ) => {
-  const series = [];
   const regionIndex = sotkanetCountyIndices[region];
   const years = getSotkanetYearsFilterString(startYear, endYear);
-  for (let i = 0; i < healthcareCategories[category].metrics.length; i++) {
-    const metric = healthcareCategories[category].metrics[i];
-    const { id, name } = metric;
-    const data = await getSotkanetDataForOneRegion(id, regionIndex, years);
-    series.push({ name, data });
-  }
-  return series;
+  const dataSet = await Promise.all(
+    healthcareCategories[category].metrics.map(metric =>
+      getSotkanetDataForOneRegion(metric, regionIndex, years)
+    )
+  );
+  return dataSet;
 };
 
 export const getHealthcareDataWholeCountry = async (ind, year) => {

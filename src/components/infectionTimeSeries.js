@@ -6,7 +6,7 @@ import {
 } from '../dataService';
 
 import { Task } from '@lit/task';
-import { commonStyles, errorView, loadingView } from './commonStyles';
+import { errorView, loadingView } from './commonStyles';
 export class InfectionTimeSeries extends LitElement {
   static properties = {
     selectedRegions: { type: Array },
@@ -52,7 +52,10 @@ export class InfectionTimeSeries extends LitElement {
         const removableDiseases = prevDiseases
           .filter(d => !this.selectedDiseases.includes(d))
           .map(d => d.index);
-        this.updateChartPartially([], removableDiseases);
+        this.infectionData = this.infectionData.filter(
+          s => !removableDiseases.includes(s.id)
+        );
+        this.updateChart();
         alreadyMadeChanges = true;
       } else if (
         this.selectedRegions.length === 1 &&
@@ -78,7 +81,10 @@ export class InfectionTimeSeries extends LitElement {
         const removableRegions = prevRegions.filter(
           r => !this.selectedRegions.includes(r)
         );
-        this.updateChartPartially([], removableRegions);
+        this.infectionData = this.infectionData.filter(
+          s => !removableRegions.includes(s.id)
+        );
+        this.updateChart();
       } else if (
         prevRegions &&
         prevRegions.length === 1 &&
@@ -88,19 +94,15 @@ export class InfectionTimeSeries extends LitElement {
         shouldFetchData = true;
       } else {
         shouldFetchData = true;
-        if (prevRegions && prevRegions.length < this.selectedRegions.length) {
+        if (
+          prevRegions &&
+          prevRegions.length < this.selectedRegions.length &&
+          !(prevRegions.length === 1 && this.chart.series.length === 1)
+        ) {
           shouldFetchAll = false;
           regionsToFetch = this.selectedRegions.filter(
             r => !prevRegions.includes(r)
           );
-          // Situation where existing series is named by its disease, not region
-          if (prevRegions.length === 1 && this.chart.series.length === 1) {
-            this.chart.series[0].name = prevRegions[0];
-            this.chart.series[0].options.id = prevRegions[0];
-            this.chart.series[0].options.name = prevRegions[0];
-            this.chart.series[0].userOptions.id = prevRegions[0];
-            this.chart.series[0].userOptions.name = prevRegions[0];
-          }
         }
       }
     }
@@ -156,13 +158,8 @@ export class InfectionTimeSeries extends LitElement {
           this.endYear
         );
       }
-      if (fetchAll) {
-        this.infectionData = data;
-        this.updateChart();
-      } else {
-        this.infectionData = this.infectionData.concat(data);
-        this.updateChartPartially(data, []);
-      }
+      this.infectionData = fetchAll ? data : this.infectionData.concat(data);
+      this.updateChart();
     },
     args: () => [],
     autoRun: false,
@@ -188,24 +185,11 @@ export class InfectionTimeSeries extends LitElement {
 
   updateChart() {
     if (!this.chart) return;
-    while (this.chart.series.length) this.chart.series[0].remove();
-    this.infectionData.forEach(s => this.chart.addSeries(s));
-    this.chart.title.textStr = this.getChartTitle();
-    this.chart.xAxis[0].setExtremes(this.startYear, this.endYear);
-    this.chart.redraw();
-  }
-
-  updateChartPartially(addSeries = [], removableSeries = []) {
-    if (!this.chart) return;
-    if (removableSeries.length === this.chart.series.length) {
-      while (this.chart.series.length) this.chart.series[0].remove();
-    } else {
-      removableSeries.forEach(d => this.chart.get(d).remove());
-    }
-    addSeries.forEach(s => this.chart.addSeries(s));
-    this.chart.title.textStr = this.getChartTitle();
-    this.chart.xAxis[0].setExtremes(this.startYear, this.endYear);
-    this.chart.redraw();
+    this.chart.update(
+      { series: this.infectionData, title: { text: this.getChartTitle() } },
+      true,
+      true
+    );
   }
 
   getChartTitle() {
@@ -264,7 +248,6 @@ export class InfectionTimeSeries extends LitElement {
         height: 100%;
       }
     `,
-    commonStyles,
   ];
 }
 window.customElements.define('infection-time-series', InfectionTimeSeries);

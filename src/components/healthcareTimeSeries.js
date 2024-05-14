@@ -11,7 +11,7 @@ import {
   getHealthcareDataForRegionByCategory,
 } from '../dataService';
 import { getMetricById, getMetricsByCategoryAndContext } from '../categories';
-import { commonStyles, errorView, loadingView } from './commonStyles';
+import { errorView, loadingView } from './commonStyles';
 
 export class HealthcareTimeSeries extends LitElement {
   static properties = {
@@ -74,8 +74,18 @@ export class HealthcareTimeSeries extends LitElement {
       this.selectedRegions.length > 1
     ) {
       this.updateSelectedMetrics();
+      shouldFetchData = true;
     }
-    if (changedProps.has('selectedVisitsMetric') && this.selectedVisitsMetric) {
+    if (
+      changedProps.has('selectedVisitsMetric') &&
+      changedProps.has('selectedPatientsMetric') &&
+      changedProps.has('selectedDaysMetric')
+    ) {
+      shouldFetchData = true;
+    } else if (
+      changedProps.has('selectedVisitsMetric') &&
+      this.selectedVisitsMetric
+    ) {
       fetchOnlyOne = 'Visits';
       shouldFetchData = true;
     } else if (
@@ -102,20 +112,32 @@ export class HealthcareTimeSeries extends LitElement {
         const removableRegions = prevRegions.filter(
           r => !this.selectedRegions.includes(r)
         );
-        this.removeSeriesFromCharts(removableRegions);
+        console.log(removableRegions, this.healthCareData);
+        this.healthCareData.visits = this.healthCareData.visits.filter(
+          s => !removableRegions.includes(s.id)
+        );
+        this.healthCareData.patients = this.healthCareData.patients.filter(
+          s => !removableRegions.includes(s.id)
+        );
+        this.healthCareData.days = this.healthCareData.days.filter(
+          s => !removableRegions.includes(s.id)
+        );
+        this.updateCharts();
       } else if (
         prevRegions &&
         prevRegions.length === 1 &&
         this.selectedRegions.length > 1
       ) {
         shouldFetchData = true;
+      } else if (prevRegions?.length === 0 && this.selectedRegions.length > 0) {
+        shouldFetchData = true;
+        this.updateSelectedMetrics();
       } else {
         shouldFetchData = true;
         if (
-          prevRegions &&
+          prevRegions?.length > 0 &&
           prevRegions.length < this.selectedRegions.length &&
-          this.selectedRegions.length > 0 &&
-          this.selectedRegions.length - prevRegions.length < 7
+          this.selectedRegions.length > 0
         ) {
           shouldFetchAll = false;
           regionsToFetch = this.selectedRegions.filter(
@@ -150,93 +172,106 @@ export class HealthcareTimeSeries extends LitElement {
       if (this.selectedRegions.length === 0) {
         this.healthCareData = data;
       } else if (this.selectedRegions.length === 1) {
-        data.visits = await getHealthcareDataForRegionByCategory(
-          'Visits',
-          newRegions,
-          this.startYear,
-          this.endYear
-        );
-        data.patients = await getHealthcareDataForRegionByCategory(
-          'Patients',
-          newRegions,
-          this.startYear,
-          this.endYear
-        );
-        data.days = await getHealthcareDataForRegionByCategory(
-          'Length of stay',
-          newRegions,
-          this.startYear,
-          this.endYear
-        );
+        data = await this.getData(data, [
+          getHealthcareDataForRegionByCategory(
+            'Visits',
+            newRegions,
+            this.startYear,
+            this.endYear
+          ),
+          getHealthcareDataForRegionByCategory(
+            'Patients',
+            newRegions,
+            this.startYear,
+            this.endYear
+          ),
+          getHealthcareDataForRegionByCategory(
+            'Length of stay',
+            newRegions,
+            this.startYear,
+            this.endYear
+          ),
+        ]);
       } else if (this.selectedRegions.length > 1) {
         if (!fetchOnlyOne) {
-          data.visits = await this.getVisitsNewRegionData(newRegions);
-          data.patients = await this.getPatientsNewRegionData(newRegions);
-          data.days = await this.getDaysNewRegionData(newRegions);
+          data = await this.getData(data, [
+            getHealthcareDataForManyRegions(
+              this.selectedVisitsMetric?.id,
+              newRegions,
+              this.startYear,
+              this.endYear
+            ),
+            getHealthcareDataForManyRegions(
+              this.selectedPatientsMetric?.id,
+              newRegions,
+              this.startYear,
+              this.endYear
+            ),
+            getHealthcareDataForManyRegions(
+              this.selectedDaysMetric?.id,
+              newRegions,
+              this.startYear,
+              this.endYear
+            ),
+          ]);
         } else {
           switch (fetchOnlyOne) {
             case 'Visits':
-              data.visits = await this.getVisitsNewRegionData(newRegions);
-              data.patients = this.healthCareData.patients;
-              data.days = this.healthCareData.days;
+              data = await this.getData(data, [
+                getHealthcareDataForManyRegions(
+                  this.selectedVisitsMetric?.id,
+                  newRegions,
+                  this.startYear,
+                  this.endYear
+                ),
+                this.healthCareData.patients,
+                this.healthCareData.days,
+              ]);
               break;
             case 'Patients':
-              data.patients = await this.getPatientsNewRegionData(newRegions);
-              data.days = this.healthCareData.days;
-              data.visits = this.healthCareData.visits;
+              data = await this.getData(data, [
+                this.healthCareData.visits,
+                getHealthcareDataForManyRegions(
+                  this.selectedPatientsMetric?.id,
+                  newRegions,
+                  this.startYear,
+                  this.endYear
+                ),
+                this.healthCareData.days,
+              ]);
               break;
             case 'Length of stay':
-              data.days = await this.getDaysNewRegionData(newRegions);
-              data.patients = this.healthCareData.patients;
-              data.visits = this.healthCareData.visits;
+              data = await this.getData(data, [
+                this.healthCareData.visits,
+                this.healthCareData.patients,
+                getHealthcareDataForManyRegions(
+                  this.selectedDaysMetric?.id,
+                  newRegions,
+                  this.startYear,
+                  this.endYear
+                ),
+              ]);
               break;
           }
         }
       }
-      if (fetchAll) {
-        this.healthCareData = data;
-        this.updateCharts();
-      } else {
-        this.healthCareData = {
-          visits: this.healthCareData.visits.concat(data.visits),
-          patients: this.healthCareData.patients.concat(data.patients),
-          days: this.healthCareData.days.concat(data.days),
-        };
-        this.updateChartsPartially(data);
-      }
+      this.healthCareData = fetchAll
+        ? data
+        : {
+            visits: this.healthCareData.visits.concat(data.visits),
+            patients: this.healthCareData.patients.concat(data.patients),
+            days: this.healthCareData.days.concat(data.days),
+          };
+      this.updateCharts();
     },
     args: () => [],
     autoRun: false,
   });
 
-  async getVisitsNewRegionData(newRegions) {
-    const d = await getHealthcareDataForManyRegions(
-      this.selectedVisitsMetric.id,
-      newRegions,
-      this.startYear,
-      this.endYear
-    );
-    return d;
-  }
-
-  async getPatientsNewRegionData(newRegions) {
-    const d = await getHealthcareDataForManyRegions(
-      this.selectedPatientsMetric.id,
-      newRegions,
-      this.startYear,
-      this.endYear
-    );
-    return d;
-  }
-
-  async getDaysNewRegionData(newRegions) {
-    const d = await getHealthcareDataForManyRegions(
-      this.selectedDaysMetric.id,
-      newRegions,
-      this.startYear,
-      this.endYear
-    );
-    return d;
+  // promises should be an array of promises for visits, patients, care days in that order
+  async getData(data, promises) {
+    const [visits, patients, days] = await Promise.all(promises);
+    return { ...data, visits, patients, days };
   }
 
   render() {
@@ -354,57 +389,29 @@ export class HealthcareTimeSeries extends LitElement {
   }
 
   firstUpdated() {
-    this.getVisitsChart();
-    this.getPatientsChart();
-    this.getCareDaysChart();
+    this.visitsChart = Highcharts.chart(
+      this.shadowRoot.querySelector('#visits-chart'),
+      this.getVisitsChartOptions()
+    );
+    this.patientsChart = Highcharts.chart(
+      this.shadowRoot.querySelector('#patients-chart'),
+      this.getPatientsChartOptions()
+    );
+    this.caredaysChart = Highcharts.chart(
+      this.shadowRoot.querySelector('#caredays-chart'),
+      this.getCareDaysChartOptions()
+    );
   }
 
   updateCharts() {
     if (!this.patientsChart || !this.caredaysChart || !this.visitsChart) return;
-    while (this.patientsChart.series.length)
-      this.patientsChart.series[0].remove();
-    while (this.caredaysChart.series.length)
-      this.caredaysChart.series[0].remove();
-    while (this.visitsChart.series.length) this.visitsChart.series[0].remove();
-    this.healthCareData.patients.forEach(s => this.patientsChart.addSeries(s));
-    this.healthCareData.days.forEach(s => this.caredaysChart.addSeries(s));
-    this.healthCareData.visits.forEach(s => this.visitsChart.addSeries(s));
-    this.patientsChart.xAxis[0].setExtremes(this.startYear, this.endYear);
-    this.visitsChart.xAxis[0].setExtremes(this.startYear, this.endYear);
-    this.caredaysChart.xAxis[0].setExtremes(this.startYear, this.endYear);
-    this.patientsChart.redraw();
-    this.caredaysChart.redraw();
-    this.visitsChart.redraw();
-  }
-
-  updateChartsPartially(data) {
-    if (!this.patientsChart || !this.caredaysChart || !this.visitsChart) return;
-    const { visits, patients, days } = data;
-    visits.forEach(s => this.visitsChart.addSeries(s));
-    patients.forEach(s => this.patientsChart.addSeries(s));
-    days.forEach(s => this.caredaysChart.addSeries(s));
-    this.patientsChart.redraw();
-    this.caredaysChart.redraw();
-    this.visitsChart.redraw();
-  }
-
-  removeSeriesFromCharts(removableSeries = []) {
-    if (!this.patientsChart || !this.caredaysChart || !this.visitsChart) return;
-    if (removableSeries.length === this.visitsChart.series.length) {
-      while (this.patientsChart.series.length)
-        this.patientsChart.series[0].remove();
-      while (this.caredaysChart.series.length)
-        this.caredaysChart.series[0].remove();
-      while (this.visitsChart.series.length)
-        this.visitsChart.series[0].remove();
-    } else {
-      removableSeries.forEach(d => this.visitsChart.get(d).remove());
-      removableSeries.forEach(d => this.patientsChart.get(d).remove());
-      removableSeries.forEach(d => this.caredaysChart.get(d).remove());
-    }
-    this.patientsChart.redraw();
-    this.caredaysChart.redraw();
-    this.visitsChart.redraw();
+    this.visitsChart.update({ series: this.healthCareData.visits }, true, true);
+    this.patientsChart.update(
+      { series: this.healthCareData.patients },
+      true,
+      true
+    );
+    this.caredaysChart.update({ series: this.healthCareData.days }, true, true);
   }
 
   updateChartsTimespan() {
@@ -430,9 +437,8 @@ export class HealthcareTimeSeries extends LitElement {
     return true;
   }
 
-  getVisitsChart() {
-    const container = this.shadowRoot.querySelector('#visits-chart');
-    this.visitsChart = Highcharts.chart(container, {
+  getVisitsChartOptions() {
+    return {
       title: { text: '' },
       credits: { enabled: false },
       subtitle: { text: 'Visits per 1000 inhabitants' },
@@ -444,12 +450,11 @@ export class HealthcareTimeSeries extends LitElement {
         verticalAlign: 'top',
       },
       series: this.healthCareData.visits,
-    });
+    };
   }
 
-  getPatientsChart() {
-    const container = this.shadowRoot.querySelector('#patients-chart');
-    this.patientsChart = Highcharts.chart(container, {
+  getPatientsChartOptions() {
+    return {
       title: { text: '' },
       credits: { enabled: false },
       subtitle: { text: 'Patients per 1000 inhabitants' },
@@ -461,12 +466,11 @@ export class HealthcareTimeSeries extends LitElement {
         verticalAlign: 'top',
       },
       series: this.healthCareData.patients,
-    });
+    };
   }
 
-  getCareDaysChart() {
-    const container = this.shadowRoot.querySelector('#caredays-chart');
-    this.caredaysChart = Highcharts.chart(container, {
+  getCareDaysChartOptions() {
+    return {
       title: { text: '' },
       credits: { enabled: false },
       subtitle: { text: 'Avg. length of stay' },
@@ -478,7 +482,7 @@ export class HealthcareTimeSeries extends LitElement {
         verticalAlign: 'top',
       },
       series: this.healthCareData.days,
-    });
+    };
   }
 
   static styles = [
@@ -499,7 +503,6 @@ export class HealthcareTimeSeries extends LitElement {
         height: 43vh;
       }
     `,
-    commonStyles,
   ];
 }
 customElements.define('healthcare-time-series', HealthcareTimeSeries);

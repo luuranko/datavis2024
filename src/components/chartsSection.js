@@ -73,11 +73,9 @@ export class ChartsSection extends LitElement {
 
   getYearSelection() {
     const getYears = (min, max) => {
-      const years = [];
-      for (let i = min; i <= max; i++) {
-        years.push(html` <sl-option value=${i}>${i}</sl-option> `);
-      }
-      return years;
+      return Array.from({ length: max - min + 1 }, (_i, y) => y + min).map(
+        y => html` <sl-option value=${y}>${y}</sl-option> `
+      );
     };
     return html`
       <div id="timespan-selection">
@@ -136,31 +134,31 @@ export class ChartsSection extends LitElement {
             `;
           })}
         </sl-select>
-        <!-- <sl-radio-group
+        <sl-radio-group
           label="Compare regions by"
           name="Select healthcare metric"
+          value=${this.currentHealthcareMetric?.context ===
+          this.healthcareContext
+            ? `${this.currentHealthcareMetric?.id}`
+            : ''}
+          @sl-change=${e => this.switchCurrentHealthcareMetric(e)}>
+          ${metricsByContext[this.healthcareContext].map(m => {
+            return html` <sl-radio value=${m.id}>${m.name}</sl-radio> `;
+          })}
+        </sl-radio-group>
+        <!-- <sl-select
+          label="Compare regions by"
           value=${this.currentHealthcareMetric?.context ===
         this.healthcareContext
           ? this.currentHealthcareMetric?.id
           : null}
-          @sl-change=${e => this.switchCurrentHealthcareMetric(e)}>
-          ${metricsByContext[this.healthcareContext].map(m => {
-          return html` <sl-radio value=${m.id}>${m.name}</sl-radio> `;
-        })}
-        </sl-radio-group> -->
-        <sl-select
-          label="Compare regions by"
-          value=${this.currentHealthcareMetric?.context ===
-          this.healthcareContext
-            ? this.currentHealthcareMetric?.id
-            : null}
           name="Select healthcare metric"
           placement="bottom"
           @sl-change=${e => this.switchCurrentHealthcareMetric(e)}>
           ${metricsByContext[this.healthcareContext].map(m => {
-            return html` <sl-option value=${m.id}>${m.name}</sl-option> `;
-          })}
-        </sl-select>
+          return html` <sl-option value=${m.id}>${m.name}</sl-option> `;
+        })}
+        </sl-select> -->
       </div>
     `;
   }
