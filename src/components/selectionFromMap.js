@@ -97,6 +97,12 @@ export class SelectionFromMap extends LitElement {
       title: {
         text: `Select regions`,
       },
+      mapNavigation: {
+        enabled: true,
+        buttonOptions: {
+          verticalAlign: 'bottom',
+        },
+      },
       subtitle: {
         text: 'Select regions by clicking, multiple with Shift or Ctrl',
       },

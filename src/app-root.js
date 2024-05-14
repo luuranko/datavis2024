@@ -29,7 +29,7 @@ export class MyElement extends LitElement {
     this.selectedDiseases = [];
     this.selectedRegions = [];
     this.startYear = minYear;
-    this.endYear = maxYear;
+    this.endYear = 2023;
   }
 
   connectedCallback() {

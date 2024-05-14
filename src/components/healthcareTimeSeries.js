@@ -404,6 +404,9 @@ export class HealthcareTimeSeries extends LitElement {
 
   updateCharts() {
     if (!this.patientsChart || !this.caredaysChart || !this.visitsChart) return;
+    this.patientsChart.xAxis[0].setExtremes(this.startYear, this.endYear);
+    this.visitsChart.xAxis[0].setExtremes(this.startYear, this.endYear);
+    this.caredaysChart.xAxis[0].setExtremes(this.startYear, this.endYear);
     this.visitsChart.update({ series: this.healthCareData.visits }, true, true);
     this.patientsChart.update(
       { series: this.healthCareData.patients },

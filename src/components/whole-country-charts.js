@@ -156,6 +156,12 @@ export class WholeCountryCharts extends LitElement {
       title: {
         text: ``,
       },
+      mapNavigation: {
+        enabled: true,
+        buttonOptions: {
+          verticalAlign: 'bottom',
+        },
+      },
       subtitle: { text: '' },
       colorAxis: {
         min: dataMin,
@@ -210,6 +216,12 @@ export class WholeCountryCharts extends LitElement {
       credits: { enabled: false },
       title: {
         text: ``,
+      },
+      mapNavigation: {
+        enabled: true,
+        buttonOptions: {
+          verticalAlign: 'bottom',
+        },
       },
       subtitle: { text: '' },
       colorAxis: {

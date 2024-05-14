@@ -270,11 +270,9 @@ export const getInfectionIncidenceForOne = async (
   const yearFilter = getYearFilter(startYear, endYear);
   const url = `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=nidrreportgroup-${diseaseFilter}&row=wscmunicipality2022-${regionFilter}&column=yearmonth-${yearFilter}&filter=measure-931297&fo=1`;
   const res = await fetch(url);
+  if (!res.ok) return [];
   const data = await res.json();
-  if (!data.dataset.dimension.yearmonth) {
-    console.error('No data found with these params');
-    return [];
-  }
+  if (!data.dataset.dimension.yearmonth) return [];
   const years = Object.values(data.dataset.dimension.yearmonth.category.label)
     .map(y => parseInt(y.split('Year ')[1]))
     .toSorted();
@@ -300,11 +298,9 @@ export const getInfectionDataForWholeCountryOneYear = async (disease, year) => {
   const yearFilter = getYearFilter(year);
   const url = `https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.json?row=nidrreportgroup-${diseaseFilter}&row=wscmunicipality2022-737101.878375.737097.737098.737093.737104.737096.877884.737094.877907.737095.878208.878211.737103.737092.737100.737099.&column=yearmonth-${yearFilter}&filter=measure-931297&fo=1`;
   const res = await fetch(url);
+  if (!res.ok) return [];
   const data = await res.json();
-  if (!data.dataset.dimension.yearmonth) {
-    console.error('No data found with these params');
-    return [];
-  }
+  if (!data.dataset.dimension.yearmonth) return [];
   const d = [];
   Object.keys(
     data.dataset.dimension.wscmunicipality2022.category.index

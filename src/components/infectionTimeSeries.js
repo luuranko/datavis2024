@@ -22,14 +22,11 @@ export class InfectionTimeSeries extends LitElement {
     this.selectedDiseases = [];
     this.currentDisease = null;
     this.startYear = 1996;
-    this.endYear = 2022;
+    this.endYear = 2023;
     this.infectionData = {};
     this.diseases = {};
   }
 
-  /*
-    consider: if widening timespan selection, only fetch needed years and append?
-  */
   willUpdate(changedProps) {
     let shouldFetchData = false;
     let alreadyMadeChanges = false;
@@ -185,6 +182,7 @@ export class InfectionTimeSeries extends LitElement {
 
   updateChart() {
     if (!this.chart) return;
+    this.chart.xAxis[0].setExtremes(this.startYear, this.endYear);
     this.chart.update(
       { series: this.infectionData, title: { text: this.getChartTitle() } },
       true,
@@ -211,11 +209,11 @@ export class InfectionTimeSeries extends LitElement {
 
   hasDataForSelectedTimespan() {
     if (!this.chart || this.chart.series.length === 0) return false;
-    const hasDataForStartYear = this.infectionData.find(
-      d => d[0] === this.startYear
+    const hasDataForStartYear = this.infectionData.some(d =>
+      d.data.some(e => e[0] === this.startYear)
     );
-    const hasDataForEndYear = this.infectionData.find(
-      d => d[0] === this.endYear
+    const hasDataForEndYear = this.infectionData.some(d =>
+      d.data.some(e => e[0] === this.endYear)
     );
     if (!hasDataForStartYear || !hasDataForEndYear) return false;
     return true;
